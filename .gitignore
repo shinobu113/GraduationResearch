@@ -2,3 +2,14 @@ __pycache__/abst_detector.cpython-37.pyc
 __pycache__/analyzing_landmarks.cpython-37.pyc
 __pycache__/create_dataset.cpython-37.pyc
 __pycache__/get_statistics.cpython-37.pyc
+main.py
+.python-version
+__pycache__/hand_tracker.cpython-37.pyc
+.vscode/tasks.json
+.vscode/settings.json
+.vscode/launch.json
+test.py
+test.png
+hand.png
+requirements.txt
+.gitignore
