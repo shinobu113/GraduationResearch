@@ -12,7 +12,8 @@ import copy
 from loguru import logger
 
 import hand_tracker
-
+import get_datas
+import detection_state
 
 def get_args() -> argparse.Namespace:
     """引数取得
@@ -24,7 +25,7 @@ def get_args() -> argparse.Namespace:
 
     # setting camera device
     parser.add_argument(
-        "--device", help='デバイスカメラ:0  Webカメラ:1', type=int, default=0)
+        "--device", help='デバイスカメラ:0  Webカメラ:1', type=int, default=1)
     parser.add_argument("--width", help='capture width', type=int, default=640)
     parser.add_argument(
         "--height", help='capture height', type=int, default=480
@@ -39,7 +40,7 @@ def get_args() -> argparse.Namespace:
         '--overwrite', type=int, default=0, help='ランドマークの上書き'
     )
     parser.add_argument(
-        '--max_num_hands', type=int, default=1, help='最大検出手数'
+        '--max_num_hands', type=int, default=2, help='最大検出手数'
     )
     parser.add_argument(
         '--min_detection_confidence', type=float, default=0.7,
@@ -49,19 +50,15 @@ def get_args() -> argparse.Namespace:
         '--min_tracking_confidence', type=float, default=0.5,
         help='ランドマーク追跡モデルの最小信頼値 [0.0, 1.0]'
     )
-
+    
     args = parser.parse_args()
     return args
 
 
 def main() -> None:
     """メインループ"""
-    cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-    _, flame = cap.read()
-    cv2.imshow("A", flame)
-    cv2.waitKey(0)
-    """args = get_args().__dict__
-
+    args = get_args().__dict__
+    capture_flag = False
     # setting camera device
     cap = cv2.VideoCapture(args['device'], cv2.CAP_DSHOW)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, args['width'])
@@ -80,37 +77,43 @@ def main() -> None:
 
     # main loop
     landmarks = []
+    ds = detection_state.detection_state(detector=detector, cap=cap)
+    print(type(detector))
+    print(type(cap))
     while cap.isOpened():
         # 静止画またはカメラ入力
-        if args['still_image'] == '':
-            ret, image = cap.read()
-            if not ret:
-                break
-            # image = cv2.flip(image, 1)
-        else:
-            image = cv2.imread(args['still_image'])
-            if not exists(args['still_image']) and args['still_image'] != '':
-                print("path error")
-                break
-            image = cv2.resize(image, (args['width'], args['height']))
+        ret, image = ds.cap.read()
+        if not ret:
+            break
 
         tmp_image = copy.deepcopy(image)
+        tmp_landmark = []
 
         if detector.detect(image):
             tmp_image, tmp_landmark = detector.draw(tmp_image)
-            if len(tmp_landmark) == 21:
-                landmarks.append(tmp_landmark)
-            
-        cv2.imshow(model_name, cv2.resize(
+            # 手を検知して，欠損がないことを確認して手の検知数とランドマークを更新する．
+            if (len(tmp_landmark)!=0 and len(tmp_landmark)%21 == 0):
+                ds.landmark = np.array(tmp_landmark)
+                ds.detected_hands_num = int(len(tmp_landmark)/21)
+        
+        if capture_flag==True:
+            #sボタンを押せばデータの収集開始する
+            get_datas.get_datas(ds)
+            capture_flag = not capture_flag
+
+
+        cv2.imshow('hand_tracker', cv2.resize(
             tmp_image, (args['width'], args['height'])))
 
         key = cv2.waitKey(1) & 0xFF
+        if key == ord('s'):
+            capture_flag = not capture_flag
         if key == ord('q'):
             break
 
-    cap.release()
+    ds.cap.release()
     cv2.destroyAllWindows()
-    return"""
+    return
 
 
 if __name__ == "__main__":
