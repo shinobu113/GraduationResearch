@@ -78,8 +78,6 @@ def main() -> None:
     # main loop
     landmarks = []
     ds = detection_state.detection_state(detector=detector, cap=cap)
-    print(type(detector))
-    print(type(cap))
     while cap.isOpened():
         # 静止画またはカメラ入力
         ret, image = ds.cap.read()
@@ -90,14 +88,14 @@ def main() -> None:
         tmp_landmark = []
 
         if detector.detect(image):
-            tmp_image, tmp_landmark = detector.draw(tmp_image)
+            tmp_image, tmp_landmark_dict = detector.draw(tmp_image)
             # 手を検知して，欠損がないことを確認して手の検知数とランドマークを更新する．
-            if (len(tmp_landmark)!=0 and len(tmp_landmark)%21 == 0):
-                ds.landmark = np.array(tmp_landmark)
-                ds.detected_hands_num = int(len(tmp_landmark)/21)
+            # if (len(tmp_landmark)!=0 and len(tmp_landmark)%21 == 0):
+            #     ds.landmark = np.array(tmp_landmark)
+            #     ds.detected_hands_num = int(len(tmp_landmark)/21)
         
+        #sボタンを押せばデータの収集開始する
         if capture_flag==True:
-            #sボタンを押せばデータの収集開始する
             get_datas.get_datas(ds)
             capture_flag = not capture_flag
 
