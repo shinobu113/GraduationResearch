@@ -17,3 +17,4 @@ __pycache__/detection_state.cpython-37.pyc
 __pycache__/get_datas.cpython-37.pyc
 old_version.py
 hand.txt
+*.mp4

@@ -7,12 +7,13 @@ import detection_state
 
 
 def get_datas(ds: detection_state.detection_state) -> None:
-
+    
     while ds.cap.isOpened():
         # 静止画またはカメラ入力
         ret, image = ds.cap.read()
         if not ret:
             break
+
 
         tmp_image = copy.deepcopy(image)
         tmp_image = cv2.circle(tmp_image, (35, 35), 20, (0, 0, 255), thickness=-1, lineType=cv2.LINE_AA)
@@ -32,6 +33,6 @@ def get_datas(ds: detection_state.detection_state) -> None:
         key = cv2.waitKey(1) & 0xFF
         if key == ord('w'):
             break
-
+    
     print("Collected Datas")
     

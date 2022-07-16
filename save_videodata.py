@@ -1,4 +1,7 @@
-# -*- coding:utf-8 -*-
+"""
+普通に動画撮るソフト使えばいいので必要ない
+videocaptureにDSHOWを指定すると動画が保存できないが使わないと少しカクつく
+"""
 from os.path import exists
 import argparse
 from pprint import pprint
@@ -12,8 +15,6 @@ import copy
 from loguru import logger
 
 import hand_tracker
-import get_datas
-import detection_state
 
 def get_args() -> argparse.Namespace:
     """引数取得
@@ -55,16 +56,16 @@ def get_args() -> argparse.Namespace:
     return args
 
 
-def main() -> None:
-    """メインループ"""
-    args = get_args().__dict__
-    capture_flag = False
-    # setting camera device
-    cap = cv2.VideoCapture(args['device'], cv2.CAP_DSHOW)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, args['width'])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args['height'])
 
-    model_name = "hand_tracker"
+def main():
+    args = get_args().__dict__
+
+    cap = cv2.VideoCapture(args['device'])
+    fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    size = (640, 480)
+    video = cv2.VideoWriter('outvideo.mp4', fmt, fps, size)
+
     try:
         detector = hand_tracker.HandTracker(
             args['max_num_hands'],
@@ -75,40 +76,40 @@ def main() -> None:
         logger.error(e)
         exit(1)
 
-    # main loop
-    landmarks = []
-    ds = detection_state.detection_state(detector=detector, cap=cap)
     while cap.isOpened():
-        # 静止画またはカメラ入力
-        ret, image = ds.cap.read()
+
+        ret, image = cap.read()
         if not ret:
             break
 
         tmp_image = copy.deepcopy(image)
-        tmp_landmark = []
-
         if detector.detect(image):
-            tmp_image, tmp_landmark_dict = detector.draw(tmp_image)
+            tmp_image, _ = detector.draw(tmp_image)
         
-        #sボタンを押せばデータの収集開始する
-        if capture_flag==True:
-            get_datas.get_datas(ds)
-            capture_flag = not capture_flag
-
-
-        cv2.imshow('hand_tracker', cv2.resize(
-            tmp_image, (args['width'], args['height'])))
-
+        cv2.imshow('hand_tracker', tmp_image)
+        
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('s'):
-            capture_flag = not capture_flag
         if key == ord('q'):
             break
-
-    ds.cap.release()
+        if key == ord('s'):
+            # 動画保存処理
+            while(1):
+                ret, image = cap.read()
+                video.write(image)# フレーム画像を動画として保存
+                
+                tmp_image = copy.deepcopy(image)
+                if detector.detect(image):
+                    tmp_image, _ = detector.draw(tmp_image)
+                cv2.circle(tmp_image, (35, 35), 20, (0, 0, 255), thickness=-1, lineType=cv2.LINE_AA)
+                
+                cv2.imshow('hand_tracker', tmp_image)
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord('w'):
+                    break
+                
+    video.release()
+    cap.release()
     cv2.destroyAllWindows()
-    return
-
 
 if __name__ == "__main__":
     main()
