@@ -14,6 +14,7 @@ from loguru import logger
 import hand_tracker
 import get_datas
 import detection_state
+import graphic
 
 def get_args() -> argparse.Namespace:
     """引数取得
@@ -78,6 +79,8 @@ def main() -> None:
     # main loop
     landmarks = []
     ds = detection_state.detection_state(detector=detector, cap=cap)
+
+    # gr = graphic.Graphic_3D()
     while cap.isOpened():
         # 静止画またはカメラ入力
         ret, image = ds.cap.read()
@@ -89,6 +92,8 @@ def main() -> None:
 
         if detector.detect(image):
             tmp_image, tmp_landmark_dict = detector.draw(tmp_image)
+            ds.update_landmarks(tmp_landmark_dict)
+
         
         #sボタンを押せばデータの収集開始する
         if capture_flag==True:
@@ -104,6 +109,8 @@ def main() -> None:
             capture_flag = not capture_flag
         if key == ord('q'):
             break
+    gra = graphic.Graphic_3D(ds.landmarks)
+    
 
     ds.cap.release()
     cv2.destroyAllWindows()

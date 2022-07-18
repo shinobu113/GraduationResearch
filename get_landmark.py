@@ -15,6 +15,14 @@ from loguru import logger
 
 import hand_tracker
 
+try:
+    detector = hand_tracker.HandTracker(
+        2, 0.7, 0.5
+    )
+except Exception as e:
+    logger.error(e)
+    exit(1)
+
 # 関数名変えよう
 def analyze(video_path :str)->None:
     print(video_path)
@@ -23,7 +31,15 @@ def analyze(video_path :str)->None:
         ret, flame = cap.read()
         if not ret:
             break
-        cv2.imshow("A", flame)
+        
+        tmp_image = copy.deepcopy(flame)
+
+        if detector.detect(flame):
+            tmp_image, tmp_landmark_dict = detector.draw(tmp_image)
+            # print(tmp_landmark_dict)
+        
+        
+        cv2.imshow("A", tmp_image)
         key = cv2.waitKey(1) & 0xFF #waitkeyがないとエラーが出る
         if key == ord('q'):
             break
@@ -32,6 +48,7 @@ def analyze(video_path :str)->None:
 
 def main():
     
+    # data内のフォルダを取得し、その中の動画に対して解析を行う
     FOLDER_PATH = './data/'
     folders = os.listdir(FOLDER_PATH)
     
