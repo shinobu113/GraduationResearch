@@ -12,7 +12,7 @@ import copy
 from loguru import logger
 
 import hand_tracker
-import get_datas
+# import get_datas
 import detection_state
 import graphic
 
@@ -78,12 +78,13 @@ def main() -> None:
 
     # main loop
     landmarks = []
-    ds = detection_state.detection_state(detector=detector, cap=cap)
+    # ds = detection_state.DetectionState(detector=detector, cap=cap)
+    ds = detection_state.DetectionState()
 
     # gr = graphic.Graphic_3D()
     while cap.isOpened():
         # 静止画またはカメラ入力
-        ret, image = ds.cap.read()
+        ret, image = cap.read()
         if not ret:
             break
 
@@ -94,25 +95,18 @@ def main() -> None:
             tmp_image, tmp_landmark_dict = detector.draw(tmp_image)
             ds.update_landmarks(tmp_landmark_dict)
 
-        
-        #sボタンを押せばデータの収集開始する
-        if capture_flag==True:
-            get_datas.get_datas(ds)
-            capture_flag = not capture_flag
 
-
-        cv2.imshow('hand_tracker', cv2.resize(
-            tmp_image, (args['width'], args['height'])))
+        cv2.imshow('hand_tracker', cv2.resize(tmp_image, (args['width'], args['height'])))
 
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('s'):
-            capture_flag = not capture_flag
         if key == ord('q'):
             break
-    gra = graphic.Graphic_3D(ds.landmarks)
     
+    gra = graphic.Graphic_3D(ds.landmarks)
+    gra.plot()
 
-    ds.cap.release()
+
+    cap.release()
     cv2.destroyAllWindows()
     return
 

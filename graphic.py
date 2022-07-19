@@ -8,17 +8,16 @@ import mpl_toolkits.mplot3d.art3d
 import detection_state
 # https://sabopy.com/py/matplotlib-animation-78/
 
-# ワイヤーフレームやってみたい！！
 
 class Graphic_3D():
     """
     リアルタイムではなく計算終わったランドマークを3Dで表示する．
     """
-    landmarks :list
-    color_dict = {'Left':'blue', 'Right':'green'}
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1, 2, 1, projection=Axes3D.name)
-    ax2 = fig.add_subplot(1, 2, 2, projection=Axes3D.name)
+    # landmarks :list
+    # color_dict = {'Left':'blue', 'Right':'green'}
+    # fig = plt.figure()
+    # ax1 = fig.add_subplot(1, 2, 1, projection=Axes3D.name)
+    # ax2 = fig.add_subplot(1, 2, 2, projection=Axes3D.name)
     connections = [
         [0, 1, 2, 3, 4],
         [0, 5, 6, 7, 8],
@@ -83,9 +82,17 @@ class Graphic_3D():
                     line = art3d.Line3D(X, Y, Z, color=self.color_dict[hand], linewidth=6)
                     self.ax2.add_line(line)
     
-    def __init__(self, landmarks :list) -> None:
-        self.landmarks = landmarks
+    def plot(self, path='./'):
         ani = animation.FuncAnimation(self.fig, self.animate, frames=len(self.landmarks),interval=100, blit=False)
-        plt.show()
+        ani.save(f'{path}/animation.gif', writer="ffmpeg")
+        # plt.show()
+
+    def __init__(self, landmarks :list) -> None:
+        # インスタンス変数として定義する必要があることに注意
+        self.landmarks = landmarks
+        self.color_dict = {'Left':'blue', 'Right':'green'}
+        self.fig = plt.figure()
+        self.ax1 = self.fig.add_subplot(1, 2, 1, projection=Axes3D.name)
+        self.ax2 = self.fig.add_subplot(1, 2, 2, projection=Axes3D.name)
         
         
