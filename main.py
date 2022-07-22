@@ -12,13 +12,11 @@ import copy
 from loguru import logger
 
 import hand_tracker
-# import get_datas
 import detection_state
 import graphic
 
 def get_args() -> argparse.Namespace:
     """引数取得
-
     Returns:
         argparse.Namespace: 取得結果
     """
@@ -61,10 +59,12 @@ def main() -> None:
     args = get_args().__dict__
     capture_flag = False
     # setting camera device
-    cap = cv2.VideoCapture(args['device'], cv2.CAP_DSHOW)
+    # cap = cv2.VideoCapture(args['device'], cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(args['device'])
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, args['width'])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args['height'])
 
+    cap = cv2.VideoCapture('./data/1/WIN_20220721_10_21_30_Pro.mp4')
     model_name = "hand_tracker"
     try:
         detector = hand_tracker.HandTracker(
@@ -81,7 +81,6 @@ def main() -> None:
     # ds = detection_state.DetectionState(detector=detector, cap=cap)
     ds = detection_state.DetectionState()
 
-    # gr = graphic.Graphic_3D()
     while cap.isOpened():
         # 静止画またはカメラ入力
         ret, image = cap.read()
@@ -95,7 +94,6 @@ def main() -> None:
             tmp_image, tmp_landmark_dict = detector.draw(tmp_image)
             ds.update_landmarks(tmp_landmark_dict)
 
-
         cv2.imshow('hand_tracker', cv2.resize(tmp_image, (args['width'], args['height'])))
 
         key = cv2.waitKey(1) & 0xFF
@@ -103,8 +101,7 @@ def main() -> None:
             break
     
     gra = graphic.Graphic_3D(ds.landmarks)
-    gra.plot()
-
+    # gra.plot()
 
     cap.release()
     cv2.destroyAllWindows()

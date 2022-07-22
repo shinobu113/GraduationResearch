@@ -82,10 +82,10 @@ class Graphic_3D():
                     line = art3d.Line3D(X, Y, Z, color=self.color_dict[hand], linewidth=6)
                     self.ax2.add_line(line)
     
-    def plot(self, path='./'):
+    def plot(self, animation_path='./animation.gif'):
         ani = animation.FuncAnimation(self.fig, self.animate, frames=len(self.landmarks),interval=100, blit=False)
-        ani.save(f'{path}/animation.gif', writer="ffmpeg")
-        # plt.show()
+        ani.save(animation_path, writer="ffmpeg")
+        plt.show()
 
     def __init__(self, landmarks :list) -> None:
         # インスタンス変数として定義する必要があることに注意
