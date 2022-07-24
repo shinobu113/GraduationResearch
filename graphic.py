@@ -1,23 +1,23 @@
+from distutils.command.build_clib import show_compilers
 from cv2 import line
 from matplotlib import animation
+from matplotlib.axes import Axes
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D, art3d
 import matplotlib.animation as animation
 import mpl_toolkits.mplot3d.art3d
+import os
+import glob
+from pathlib import Path
+
 import detection_state
-# https://sabopy.com/py/matplotlib-animation-78/
 
 
 class Graphic_3D():
     """
     リアルタイムではなく計算終わったランドマークを3Dで表示する．
     """
-    # landmarks :list
-    # color_dict = {'Left':'blue', 'Right':'green'}
-    # fig = plt.figure()
-    # ax1 = fig.add_subplot(1, 2, 1, projection=Axes3D.name)
-    # ax2 = fig.add_subplot(1, 2, 2, projection=Axes3D.name)
     connections = [
         [0, 1, 2, 3, 4],
         [0, 5, 6, 7, 8],
@@ -96,3 +96,97 @@ class Graphic_3D():
         self.ax2 = self.fig.add_subplot(1, 2, 2, projection=Axes3D.name)
         
         
+
+
+def show_joint_angles() -> None:
+    """
+    右手と左手の関節の角度データをグラフで表示する
+    """
+
+    # グラフ領域の設定1
+    fig1 = plt.figure("Left Hand", figsize=(12,6))
+    fig1.subplots_adjust(wspace=0.2, hspace=0.5)
+    fig1.suptitle("Left Hand")
+    _axes1 = []
+    for i in range(12):
+        ax = fig1.add_subplot(3,4,i+1)
+        ax.set_title(str(i+1))
+        _axes1.append(ax)
+    
+    # グラフ領域の設定2
+    fig2 = plt.figure("Right Hand", figsize=(12,6))
+    fig2.subplots_adjust(wspace=0.2, hspace=0.5)
+    fig2.suptitle("Right Hand")
+    _axes2 = []
+    for i in range(12):
+        ax = fig2.add_subplot(3,4,i+1)
+        ax.set_title(str(i+1))
+        _axes2.append(ax)
+
+
+    BASE_DIR_PATH = './data/'
+    dir_names = os.listdir(BASE_DIR_PATH)
+    for dir_name in dir_names:
+        video_paths = glob.glob(f'{BASE_DIR_PATH}/{dir_name}/*.mp4')
+        
+        for i, video_path in enumerate(video_paths):
+            video_name = Path(video_path).stem  # 拡張子抜きのファイル名
+            
+            if video_name=='original':  # 動画の元データには解析を行わない
+                continue
+
+            input_video_path = video_path
+            output_pkl_path  = f'{BASE_DIR_PATH}/{dir_name}/{video_name}.pkl'
+            
+            if os.path.isfile(output_pkl_path):
+                ds = detection_state.load_detection_state(pkl_path=output_pkl_path)
+            else:
+                continue
+            
+            left_angles = []
+            right_angles = []
+            for joint_angle in ds.joint_angles:
+                left_angles.append(joint_angle['Left'])
+                right_angles.append(joint_angle['Right'])
+            left_angles = np.array(left_angles)
+            right_angles = np.array(right_angles)
+
+            for i in range(12):
+                _axes1[i].plot(left_angles[:,i])
+                _axes2[i].plot(right_angles[:,i])
+    plt.show()
+
+
+
+def show_operation_time_hist() -> None:
+    """
+    作業時間の分布をヒストグラムで表示
+    """
+    fig = plt.figure("作業時間分布")
+    ax = fig.add_subplot(1,1,1)
+
+    BASE_DIR_PATH = './data/'
+    dir_names = os.listdir(BASE_DIR_PATH)
+    operation_times = []
+    for dir_name in dir_names:
+        video_paths = glob.glob(f'{BASE_DIR_PATH}/{dir_name}/*.mp4')
+        
+        for i, video_path in enumerate(video_paths):
+            video_name = Path(video_path).stem  # 拡張子抜きのファイル名
+            
+            if video_name=='original':  # 動画の元データには解析を行わない
+                continue
+
+            input_video_path = video_path
+            output_pkl_path  = f'{BASE_DIR_PATH}/{dir_name}/{video_name}.pkl'
+            
+            if os.path.isfile(output_pkl_path):
+                ds = detection_state.load_detection_state(pkl_path=output_pkl_path)
+            else:
+                continue
+            operation_times.append(ds.operation_time)
+
+    ax.hist(operation_times, bins=20)
+    plt.show()
+
+show_operation_time_hist()

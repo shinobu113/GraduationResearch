@@ -9,9 +9,10 @@ class DetectionState(object):
     def __init__(self) -> None:
         self.landmarks = []             # ランドマークの時系列データ
         self.latest_landmark_dict = {}  # 最新のランドマークを保持．
-        self.joint_angle = []           # 関節の角度
+        self.joint_angles = []           # 関節の角度
         self.gender = 'man'             # 性別
         self.dominant_hand = 'Right'    # 利き手('Right' or 'Left')←検出した手(handness)とは異なることに注意する．
+        self.operation_time = 0         # はんだ付けの作業時間
 
     def update_landmarks(self, landmark_dict :dict) -> None:
         self.landmarks.append(landmark_dict)

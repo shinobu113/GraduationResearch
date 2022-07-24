@@ -78,7 +78,6 @@ def main() -> None:
 
     # main loop
     landmarks = []
-    # ds = detection_state.DetectionState(detector=detector, cap=cap)
     ds = detection_state.DetectionState()
 
     while cap.isOpened():

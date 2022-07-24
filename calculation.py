@@ -5,7 +5,7 @@ import argparse
 from pprint import pprint
 from time import time, sleep
 import glob
-from cv2 import FILE_NODE_MAP
+from cv2 import FILE_NODE_MAP, destroyWindow
 import pickle
 import math
 from pathlib import Path
@@ -52,12 +52,15 @@ def calculate_landmarks(input_video_path :str):
         key = cv2.waitKey(1) & 0xFF #waitkeyがないとエラーが出る
         if key == ord('q'):
             sys.exit()
+            # cv2.destroyWindow(input_video_path)
+            # break
     print("---------------------------")
+    cv2.destroyWindow(input_video_path)
     return ds
 
 
 
-def calculate_joint_angle(ds :detection_state.DetectionState):
+def calculate_joint_angle(landmarks :list):
     """
     ランドマーク情報から関節の開き具合(角度)を計算する
     """
@@ -77,15 +80,15 @@ def calculate_joint_angle(ds :detection_state.DetectionState):
     ]
     
     joint_angles = []
-    for landmark in ds.landmarks:
+    for landmark in landmarks:
         joint_angle = {'Left':[], 'Right':[]}
         
+        # 手を1つしか検出していないときはスルーする
+        if landmark['Left']==[] or landmark['Right']==[]:
+            continue
+
         for hand in ['Left', 'Right']:
             angles = []
-            if landmark[hand] == []:
-                joint_angle[hand] = [10000]
-                # !欠損値として処理する？
-                continue
             
             # 関節のつながりからなす角度を計算する
             for connection in connections:
@@ -103,7 +106,8 @@ def calculate_joint_angle(ds :detection_state.DetectionState):
                 # print(angle_deg)
             joint_angle[hand] = angles
         joint_angles.append(joint_angle)
-    print(joint_angles)        
+    # print(joint_angles)
+    return joint_angles
 
 
 
@@ -158,12 +162,18 @@ def main():
                 ds = detection_state.load_detection_state(pkl_path=output_pkl_path)
             else:
                 ds = calculate_landmarks(input_video_path=input_video_path)
-                detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)
+                
+                ds.landmarks = apply_moving_average(ds.landmarks)   # 移動平均を適用する
+                detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
             
-            # 移動平均を適用する
-            ds.landmarks = apply_moving_average(ds.landmarks)
-            calculate_joint_angle(ds)
-            
+            # ds.landmarks = apply_moving_average(ds.landmarks)   # 移動平均を適用する
+            cap = cv2.VideoCapture(input_video_path)
+            frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            ds.operation_time = int(frame_count/fps)
+            # ds.joint_angles = calculate_joint_angle(ds.landmarks) # 関節の角度を計算する
+            detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
+
             # グラフの表示
             # graph = Graphic_3D(ds.landmarks)
             # graph.plot(animation_path=f'{BASE_DIR_PATH}/{dir_name}/{video_name}.gif')

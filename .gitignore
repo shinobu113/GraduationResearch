@@ -21,3 +21,6 @@ hand.txt
 __pycache__/graphic.cpython-37.pyc
 *.pkl
 *.gif
+__pycache__/calculate_joint_angle.cpython-37.pyc
+*.png
+*.jpg
