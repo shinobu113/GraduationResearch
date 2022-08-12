@@ -110,8 +110,36 @@ def calculate_joint_angle(landmarks :list):
     return joint_angles
 
 
+def calculate_variance(joint_angles :list) -> dict:
+    """
+    時系列データにおける分散を計算する
+    """
+    # 内包表記でスマートに！
+    left  = np.array([joint_angle['Left'] for joint_angle in joint_angles])
+    right = np.array([joint_angle['Right'] for joint_angle in joint_angles])
+    return {'Left' :np.var(left, axis=0), 'Right' :np.var(right, axis=0)}
 
-def apply_moving_average(landmarks :list):
+
+def calculate_mean(joint_angles :list) -> dict:
+    """
+    時系列データにおける平均を計算する
+    """
+    left  = np.array([joint_angle['Left'] for joint_angle in joint_angles])
+    right = np.array([joint_angle['Right'] for joint_angle in joint_angles])
+    return {'Left' :np.mean(left, axis=0), 'Right' :np.mean(right, axis=0)}
+
+
+def calculate_operation_time(input_video_path :str) -> int:
+    """
+    作業秒数（動画の時間）を計算する
+    """
+    cap = cv2.VideoCapture(input_video_path)
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    return int(frame_count/fps)
+
+
+def apply_moving_average(landmarks :list) -> list:
     """
     ランドマークの情報に移動平均を適用して平滑化する．
     """
@@ -166,12 +194,11 @@ def main():
                 ds.landmarks = apply_moving_average(ds.landmarks)   # 移動平均を適用する
                 detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
             
-            # ds.landmarks = apply_moving_average(ds.landmarks)   # 移動平均を適用する
-            cap = cv2.VideoCapture(input_video_path)
-            frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            ds.operation_time = int(frame_count/fps)
-            # ds.joint_angles = calculate_joint_angle(ds.landmarks) # 関節の角度を計算する
+            ds.landmarks = apply_moving_average(ds.landmarks)                               # 移動平均を適用する
+            ds.operation_time = calculate_operation_time(input_video_path=input_video_path) # 動画の時間を計算する
+            ds.joint_angles = calculate_joint_angle(ds.landmarks)                           # 関節の角度を計算する
+            ds.joint_angle_mean = calculate_mean(ds.joint_angles)                           # 関節の角度の平均を計算する
+            ds.joint_angle_var = calculate_variance(ds.joint_angles)                        # 関節の角度の分散を計算する
             detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
 
             # グラフの表示

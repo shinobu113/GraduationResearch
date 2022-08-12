@@ -63,8 +63,6 @@ def main() -> None:
     cap = cv2.VideoCapture(args['device'])
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, args['width'])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args['height'])
-
-    cap = cv2.VideoCapture('./data/1/WIN_20220721_10_21_30_Pro.mp4')
     model_name = "hand_tracker"
     try:
         detector = hand_tracker.HandTracker(
@@ -79,11 +77,11 @@ def main() -> None:
     # main loop
     landmarks = []
     ds = detection_state.DetectionState()
-
     while cap.isOpened():
         # 静止画またはカメラ入力
         ret, image = cap.read()
         if not ret:
+            print("Break")
             break
 
         tmp_image = copy.deepcopy(image)
@@ -96,12 +94,14 @@ def main() -> None:
         cv2.imshow('hand_tracker', cv2.resize(tmp_image, (args['width'], args['height'])))
 
         key = cv2.waitKey(1) & 0xFF
+        if key == ord('s'):
+            cv2.imwrite('./figures/screenshot.png', tmp_image)
         if key == ord('q'):
             break
     
     gra = graphic.Graphic_3D(ds.landmarks)
     # gra.plot()
-
+    
     cap.release()
     cv2.destroyAllWindows()
     return

@@ -55,7 +55,10 @@ class HandTracker(AbstDetector):
         
 
         landmark_dict = {'Left':[], 'Right':[]}  # landmark_listをdict型で左手右手を取り出しやすいようにする
+        # landmark_color = {'Left':(102,126,0), 'Right':(0,255,0)}
         landmark_color = {'Left':(255,0,0), 'Right':(0,255,0)}
+        # landmark_color = {'Left':(134,90,242), 'Right':(33,33,33)}
+        # landmark_color = {'Left':(33,33,33), 'Right':(33,33,33)}
 
         for i, (hand_landmarks, handedness) in enumerate(zip(self.results.multi_hand_landmarks, self.results.multi_handedness)):
             landmark_buf = []

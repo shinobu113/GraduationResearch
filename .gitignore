@@ -24,3 +24,4 @@ __pycache__/graphic.cpython-37.pyc
 __pycache__/calculate_joint_angle.cpython-37.pyc
 *.png
 *.jpg
+__pycache__/calculation.cpython-37.pyc

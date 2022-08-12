@@ -98,7 +98,7 @@ class Graphic_3D():
         
 
 
-def show_joint_angles() -> None:
+def show_joint_angles(pkl_path = "") -> None:
     """
     右手と左手の関節の角度データをグラフで表示する
     """
@@ -122,6 +122,22 @@ def show_joint_angles() -> None:
         ax = fig2.add_subplot(3,4,i+1)
         ax.set_title(str(i+1))
         _axes2.append(ax)
+    
+    # ファイルの指定があるときはそのファイルのデータのみを表示する
+    if pkl_path != "":
+        ds = detection_state.load_detection_state(pkl_path=pkl_path)
+        left_angles = []
+        right_angles = []
+        for joint_angle in ds.joint_angles:
+            left_angles.append(joint_angle['Left'])
+            right_angles.append(joint_angle['Right'])
+        left_angles = np.array(left_angles)
+        right_angles = np.array(right_angles)
+        for i in range(12):    
+            _axes1[i].plot(left_angles[:,i])
+            _axes2[i].plot(right_angles[:,i])
+        plt.show()
+        return
 
 
     BASE_DIR_PATH = './data/'
@@ -130,6 +146,7 @@ def show_joint_angles() -> None:
         video_paths = glob.glob(f'{BASE_DIR_PATH}/{dir_name}/*.mp4')
         
         for i, video_path in enumerate(video_paths):
+            print(video_path)
             video_name = Path(video_path).stem  # 拡張子抜きのファイル名
             
             if video_name=='original':  # 動画の元データには解析を行わない
@@ -189,4 +206,5 @@ def show_operation_time_hist() -> None:
     ax.hist(operation_times, bins=20)
     plt.show()
 
-show_operation_time_hist()
+# show_operation_time_hist()
+# show_joint_angles()
