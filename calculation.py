@@ -206,5 +206,5 @@ def main():
             # graph.plot(animation_path=f'{BASE_DIR_PATH}/{dir_name}/{video_name}.gif')
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

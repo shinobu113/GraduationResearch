@@ -4,18 +4,19 @@ import pickle
 import pprint
 
 import hand_tracker
-
+import graphic
 class DetectionState(object):
     # インスタンス変数とクラス変数の違いに注意する．(前者を使用しないとpklで上手くシリアライズ化できない)    
     def __init__(self) -> None:
         self.landmarks = []             # ランドマークの時系列データ
         self.latest_landmark_dict = {}  # 最新のランドマークを保持．
-        self.joint_angles = []           # 関節の角度
+        self.joint_angles = []          # 関節の角度
         self.gender = 'man'             # 性別
         self.dominant_hand = 'Right'    # 利き手('Right' or 'Left')←検出した手(handness)とは異なることに注意する．
         self.operation_time = 0         # はんだ付けの作業時間
         self.joint_angle_mean = {}
         self.joint_angle_var = {}
+        self.label = 0                  # はんだが良いか悪いかのラベル
 
     def update_landmarks(self, landmark_dict :dict) -> None:
         self.landmarks.append(landmark_dict)
@@ -29,7 +30,8 @@ class DetectionState(object):
                 dominant_hand : {self.dominant_hand}\n \
                 operation_time : {self.operation_time}\n \
                 joint_angle_mean : {self.joint_angle_mean}\n \
-                joint_angle_var : {self.joint_angle_var}'
+                joint_angle_var : {self.joint_angle_var}\n \
+                label : {self.label}'
 
 
 # pkl形式で保存する
@@ -44,3 +46,30 @@ def load_detection_state(pkl_path :str):
     with open(pkl_path, 'rb') as f:
         ds = pickle.load(f)
     return ds
+
+
+def set_labels():
+    labels = [
+        [1,1,0,1,0,1,1,1,1,1,0,0,0,0,0,0,0,1],
+        [0,1,1,1,1,1,1,1,1,1,1,0,0,0,1,0,1,1],
+        [1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,0,0,1,1,1,1,1,1,0,1,1,1,1,1],
+        [1,1,0,1,0,1,1,1,1,1,1,1,1,0,1,0,1,1],
+        [1,1,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+        [0,0,0,1,1,1,1,0,1,0,1,0,0,0,1,0,0,0],
+    ]
+    file_pathes = graphic.get_file_path_list()
+    print(file_pathes)
+    for file_path in file_pathes:
+       _split = file_path.split('\\')
+       folder_name = _split[-2]
+       file_name = _split[-1].split('.')[0]
+       ds = load_detection_state(file_path)
+       ds.label = labels[int(folder_name)-1][int(file_name)-1]
+    
+       output_pkl_path  = f'./data/{folder_name}/{file_name}.pkl'
+       save_detection_state(ds, output_pkl_path)
+
+
