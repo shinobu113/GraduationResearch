@@ -96,22 +96,6 @@ class Graphic_3D():
         self.ax2 = self.fig.add_subplot(1, 2, 2, projection=Axes3D.name)
         
         
-def get_file_path_list() -> list:
-    """
-    解析するファイル(pkl)のパスをリストで取得
-    """
-    res_file_list = []
-    BASE_DIR_PATH = '.\\data'
-    dir_names = os.listdir(BASE_DIR_PATH)
-    for dir_name in dir_names:
-        video_pathes = glob.glob(f'{BASE_DIR_PATH}\\{dir_name}\\*.pkl')
-        for video_path in video_pathes:
-            video_name = Path(video_path).stem  # 拡張子抜きのファイル名
-            if video_name=='original':  # 動画の元データには解析を行わない
-                continue
-            res_file_list.append(video_path)
-    # print(res_file_list)
-    return res_file_list
 
 
 def show_joint_angles(pkl_path = "") -> None:

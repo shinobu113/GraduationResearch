@@ -2,6 +2,9 @@ import numpy as np
 import cv2
 import pickle
 import pprint
+import os
+import glob
+from pathlib import Path
 
 import hand_tracker
 import graphic
@@ -60,8 +63,8 @@ def set_labels():
         [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
         [0,0,0,1,1,1,1,0,1,0,1,0,0,0,1,0,0,0],
     ]
-    file_pathes = graphic.get_file_path_list()
-    print(file_pathes)
+    file_pathes = get_file_path_list()
+    # print(file_pathes)
     for file_path in file_pathes:
        _split = file_path.split('\\')
        folder_name = _split[-2]
@@ -73,3 +76,19 @@ def set_labels():
        save_detection_state(ds, output_pkl_path)
 
 
+def get_file_path_list() -> list:
+    """
+    解析するファイル(pkl)のパスをリストで取得
+    """
+    res_file_list = []
+    BASE_DIR_PATH = '.\\data'
+    dir_names = os.listdir(BASE_DIR_PATH)
+    for dir_name in dir_names:
+        video_pathes = glob.glob(f'{BASE_DIR_PATH}\\{dir_name}\\*.pkl')
+        for video_path in video_pathes:
+            video_name = Path(video_path).stem  # 拡張子抜きのファイル名
+            if video_name=='original':  # 動画の元データには解析を行わない
+                continue
+            res_file_list.append(video_path)
+    # print(res_file_list)
+    return res_file_list
