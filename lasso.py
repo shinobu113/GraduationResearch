@@ -1,5 +1,7 @@
+from numpy import double
 from sklearn.linear_model import Lasso
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
 import numpy as np
 
 import detection_state
@@ -18,42 +20,50 @@ for file_path in file_pathes:
     X.append(x)
     Y.append(label)
 
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.8, random_state=0)
 
-# lasso = Lasso(alpha=1).fit(X_train, Y_train)
-# print(lasso.coef_)
-
-# X_test_predict = lasso.predict(X_test)
-# X_test_predict = [1 if predict > 0.5 else 0 for predict in X_test_predict]
-
-# X_test_predict = np.array(X_test_predict)
-# Y_test = np.array(Y_test)
-
-# match_cnt = list(X_test_predict == Y_test).count(True)
-# print(match_cnt/len(X_test_predict))
-
-
-acc = []
-for i in range(1, 101):
-    print(i)
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.8, random_state=0)
-    lasso = Lasso(alpha=0.01*i).fit(X_train, Y_train)
+def model_fit(lasso_alpha: float = 1, threshold: float = 0.5):
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
+    lasso = Lasso(alpha=lasso_alpha).fit(X_train, Y_train)
     X_test_predict = lasso.predict(X_test)
-    X_test_predict = [1 if predict > 0.5 else 0 for predict in X_test_predict]
+    X_test_predict = [1 if predict > threshold else 0 for predict in X_test_predict]
 
     X_test_predict = np.array(X_test_predict)
     Y_test = np.array(Y_test)
 
     match_cnt = list(X_test_predict == Y_test).count(True)
-    acc.append(match_cnt/len(X_test_predict))
+    acc = match_cnt/len(X_test_predict)
+    tn, fp, fn, tp = confusion_matrix(Y_test, X_test_predict).ravel()
+    # print(Y_test)
+    # print(X_test_predict)
+    return acc, [tn,fp,fn,tp], lasso.coef_
 
-print(acc)
-print(max(acc))
 
-fig = plt.figure("Accuracy-Alpha Graph")
-ax = fig.add_subplot(1,1,1)
+# fig = plt.figure("Accuracy-Alpha Graph")
+# ax = fig.add_subplot(1,1,1)
+# ax.plot((np.array(range(1,101))/100), acc)
+# plt.xlabel("Alpha", fontsize=15)
+# plt.ylabel("Accuracy", fontsize=15)
+# plt.show()
 
-ax.plot((np.array(range(1,101))/100), acc)
-plt.xlabel("Alpha", fontsize=15)
-plt.ylabel("Accuracy", fontsize=15)
-plt.show()
+# mx = max(acc)
+# ina = acc.index(mx)
+# print(ina)
+
+# acc = []
+# for i in range(1,101):
+#     acc.append(model_fit(lasso_alpha=0.01*i)[0])
+
+acc = []
+# for i in range(1,31):
+#     print(0.5+(0.01*i))
+#     acc.append(model_fit(lasso_alpha=0.3, threshold=0.5+(0.01*i))[0])
+
+# mx = [0,0,0]
+# for i in range(1, 101):
+#     for j in range(1, 31):
+#         res = [model_fit(lasso_alpha=0.01*i, threshold=0.5+(0.01*j))[0], i, j]
+#         mx = [res[0], 0.01*i, 0.5+(0.01*j)] if mx[0] <= res[0] else mx
+
+# print(mx)
+
+# print(model_fit(1, 0.67))

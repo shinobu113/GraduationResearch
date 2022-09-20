@@ -208,3 +208,7 @@ def main():
 
 # if __name__ == "__main__":
 #     main()
+files = detection_state.get_file_path_list()
+for file in files:
+    ds = detection_state.load_detection_state(file)
+    print(file, ds.label)
