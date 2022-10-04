@@ -21,7 +21,7 @@ for file_path in file_pathes:
     Y.append(label)
 
 
-def model_fit(lasso_alpha: float = 1, threshold: float = 0.5):
+def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
     lasso = Lasso(alpha=lasso_alpha).fit(X_train, Y_train)
     X_test_predict = lasso.predict(X_test)
@@ -49,21 +49,16 @@ def model_fit(lasso_alpha: float = 1, threshold: float = 0.5):
 # ina = acc.index(mx)
 # print(ina)
 
-# acc = []
-# for i in range(1,101):
-#     acc.append(model_fit(lasso_alpha=0.01*i)[0])
 
 acc = []
 # for i in range(1,31):
 #     print(0.5+(0.01*i))
 #     acc.append(model_fit(lasso_alpha=0.3, threshold=0.5+(0.01*i))[0])
 
-# mx = [0,0,0]
-# for i in range(1, 101):
-#     for j in range(1, 31):
-#         res = [model_fit(lasso_alpha=0.01*i, threshold=0.5+(0.01*j))[0], i, j]
-#         mx = [res[0], 0.01*i, 0.5+(0.01*j)] if mx[0] <= res[0] else mx
+mx = [0,0,0]
+for i in range(1, 101):
+    for j in range(1, 31):
+        res = [model_fit(lasso_alpha=0.01*i, threshold=0.5+(0.01*j))[0], i, j]
+        mx = [res[0], 0.01*i, 0.5+(0.01*j)] if mx[0] <= res[0] else mx
 
-# print(mx)
-
-# print(model_fit(1, 0.67))
+print(mx)

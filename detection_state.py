@@ -1,3 +1,4 @@
+from json import load
 import numpy as np
 import cv2
 import pickle
@@ -76,12 +77,13 @@ def set_labels():
        save_detection_state(ds, output_pkl_path)
 
 
+
 def get_file_path_list() -> list:
     """
     解析するファイル(pkl)のパスをリストで取得
     """
     res_file_list = []
-    BASE_DIR_PATH = '.\\data'
+    BASE_DIR_PATH = './data'
     dir_names = os.listdir(BASE_DIR_PATH)
     for dir_name in dir_names:
         video_pathes = glob.glob(f'{BASE_DIR_PATH}\\{dir_name}\\*.pkl')
@@ -92,3 +94,4 @@ def get_file_path_list() -> list:
             res_file_list.append(video_path)
     # print(res_file_list)
     return res_file_list
+

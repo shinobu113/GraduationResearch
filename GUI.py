@@ -38,7 +38,7 @@ class Application(tk.Frame):
         self.filename = filedialog.askopenfilename(
             title = "読み込むデータの選択",
             # filetypes = [("PKL", ".pkl"), ("MP4", ".mp4"),("Image file", ".bmp .png .jpg .tif"), ("Bitmap", ".bmp"), ("PNG", ".png"), ("JPEG", ".jpg"), ("Tiff", ".tif") ], # ファイルフィルタ
-            initialdir = "./data/9/" # 自分自身のディレクトリ
+            initialdir = "./data/10/" # 自分自身のディレクトリ
         )
 
     def show_video(self):

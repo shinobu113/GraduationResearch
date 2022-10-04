@@ -37,6 +37,18 @@ def calculate_landmarks(input_video_path :str):
     print(input_video_path)
     cap = cv2.VideoCapture(input_video_path)
     ds = detection_state.DetectionState()
+
+    # #動画サイズ取得
+    # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # #フレームレート取得
+    # fps = cap.get(cv2.CAP_PROP_FPS)
+
+    # #フォーマット指定
+    # fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    # #注）グレースケールの画像を出力する場合は第5引数に0を与える
+    # writer = cv2.VideoWriter('./output.mp4', fmt, fps, (width, height))
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -49,14 +61,59 @@ def calculate_landmarks(input_video_path :str):
             ds.update_landmarks(tmp_landmark_dict)
         
         cv2.imshow(input_video_path, tmp_image)
+        # writer.write(tmp_image)
         key = cv2.waitKey(1) & 0xFF #waitkeyがないとエラーが出る
         if key == ord('q'):
             sys.exit()
             # cv2.destroyWindow(input_video_path)
             # break
+    cap.release()
+    # writer.release()
     print("---------------------------")
     cv2.destroyWindow(input_video_path)
     return ds
+
+
+# 動画を左右反転させる(左利き用)
+def flip_left_right(input_video_path :str):
+
+    # video_name = Path(video_path).stem  # 拡張子抜きのファイル名
+
+    cap = cv2.VideoCapture(input_video_path)
+
+    #動画サイズ取得
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    #フレームレート取得
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    #フォーマット指定
+    fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    #注）グレースケールの画像を出力する場合は第5引数に0を与える
+    writer = cv2.VideoWriter(f'./output.mp4', fmt, fps, (width, height))
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        tmp_image = copy.deepcopy(frame)
+
+        if detector.detect(frame):
+            tmp_image, tmp_landmark_dict = detector.draw(tmp_image)
+        
+        cv2.imshow(input_video_path, tmp_image)
+        frame = cv2.flip(frame,1)
+        writer.write(frame)
+        key = cv2.waitKey(1) & 0xFF #waitkeyがないとエラーが出る
+        if key == ord('q'):
+            sys.exit()
+            # cv2.destroyWindow(input_video_path)
+            # break
+    cap.release()
+    writer.release()
+    print("---------------------------")
+    cv2.destroyWindow(input_video_path)
 
 
 
@@ -206,9 +263,13 @@ def main():
             # graph.plot(animation_path=f'{BASE_DIR_PATH}/{dir_name}/{video_name}.gif')
 
 
-# if __name__ == "__main__":
-#     main()
-files = detection_state.get_file_path_list()
-for file in files:
-    ds = detection_state.load_detection_state(file)
-    print(file, ds.label)
+if __name__ == "__main__":
+    main()
+    
+# files = detection_state.get_file_path_list()
+# for file in files:
+#     ds = detection_state.load_detection_state(file)
+#     print(file, ds.label)
+
+# calculate_landmarks("C:\\Users\\shino\\Desktop\\R4\\GraduationResearch\\Program\\data\\5\\5.mp4")
+# calculate_landmarks("C:\\Users\\shino\\Desktop\\R4\\GraduationResearch\\Program\\data\\4\\9.mp4")
