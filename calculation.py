@@ -244,12 +244,13 @@ def main():
             output_pkl_path  = f'{BASE_DIR_PATH}/{dir_name}/{video_name}.pkl'
             
             if os.path.isfile(output_pkl_path):
-                ds = detection_state.load_detection_state(pkl_path=output_pkl_path)
-            else:
-                ds = calculate_landmarks(input_video_path=input_video_path)
-                
-                ds.landmarks = apply_moving_average(ds.landmarks)   # 移動平均を適用する
-                detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
+                # ds = detection_state.load_detection_state(pkl_path=output_pkl_path)
+                continue
+            
+            ds = calculate_landmarks(input_video_path=input_video_path)
+            
+            ds.landmarks = apply_moving_average(ds.landmarks)   # 移動平均を適用する
+            detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
             
             ds.landmarks = apply_moving_average(ds.landmarks)                               # 移動平均を適用する
             ds.operation_time = calculate_operation_time(input_video_path=input_video_path) # 動画の時間を計算する
@@ -261,6 +262,13 @@ def main():
             # グラフの表示
             # graph = Graphic_3D(ds.landmarks)
             # graph.plot(animation_path=f'{BASE_DIR_PATH}/{dir_name}/{video_name}.gif')
+
+
+def execute_calculation(input_video_path :str) -> None:
+    ds = detection_state.DetectionState()
+
+
+
 
 
 if __name__ == "__main__":
