@@ -25,6 +25,7 @@ class VideoPlayer(tk.Frame):
         super().__init__(master,width=1000,height=500)
         self.master.resizable(width=False, height=False)
         self.config(bg="#000000")
+        self.master.protocol("WM_DELETE_WINDOW", self.click_close)
         self.video = None
         self.playing = False
         self.video_thread = None
@@ -34,6 +35,7 @@ class VideoPlayer(tk.Frame):
         self.ds = None
         self.detector = None
         self.mediapipe_flag = True
+        self.path = None
 
         self.load_GUI_settings()
         self.load_detection_state()
@@ -49,13 +51,11 @@ class VideoPlayer(tk.Frame):
         button2 = tk.Button(self.frame_menubar, text = "項目の訂正")
         button3 = tk.Button(self.frame_menubar, text = "パラメータの調節")
         button4 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button)
-        button5 = tk.Button(self.frame_menubar, text = "項目の確認", command=self.output_values)
         # ボタンをフレームに配置
         button1.pack(side = tk.LEFT)
         button2.pack(side = tk.LEFT)
         button3.pack(side = tk.LEFT)
         button4.pack(side = tk.LEFT)
-        button5.pack(side = tk.LEFT)
         # ツールバーをウィンドの上に配置
         self.frame_menubar.pack(side=tk.TOP, fill=tk.X)
 
@@ -102,19 +102,21 @@ class VideoPlayer(tk.Frame):
         self.labelframe_video.propagate(False)
 
 
+    def destroy_widjet(self) -> None:
+        self.frame_menubar.destroy()
+        self.labelframe_parameter.destroy()
+        self.labelframe_video.destroy()
+
+
     def push_mediapipe_button(self):
         self.mediapipe_flag = not self.mediapipe_flag
 
 
-    def output_values(self):
-        try:
-            # PKLを読み込んで値を更新した後保存する
-            with open(f'./data/{self.folder_name}/{self.file_name}.pkl', 'rb') as f:
-                _read = pickle.load(f)
-                print(_read)
-        except Exception as e:
-            print('例外発生です')
-            print(e)
+    def click_close(self):
+        # 現在開いているファイルをGUI_settings.txtに上書きして保存する．
+        with open('GUI_settings.txt', 'w') as f:
+            f.write(f'{self.folder_name} {self.file_name}')
+        self.master.destroy()
 
 
     def load_GUI_settings(self):
@@ -124,6 +126,9 @@ class VideoPlayer(tk.Frame):
                 tmp = f.read().split()
                 self.folder_name = tmp[0]
                 self.file_name = tmp[1]
+            self.master.title(f'ファイル：./data/{self.folder_name}/{self.file_name}.mp4')
+            self.path = f'./data/{self.folder_name}/{self.file_name}.mp4'
+            self.get_video(self.path)
         except Exception as e:
             print('例外発生です')
             print(e)
@@ -152,10 +157,20 @@ class VideoPlayer(tk.Frame):
             # filetypes = [("PKL", ".pkl"), ("MP4", ".mp4"),("Image file", ".bmp .png .jpg .tif"), ("Bitmap", ".bmp"), ("PNG", ".png"), ("JPEG", ".jpg"), ("Tiff", ".tif") ], # ファイルフィルタ
             initialdir = "./data/" # 自分自身のディレクトリ
         )
-        print("ここでGUI_settingsを更新する処理を加える")
+        _split = self.filename.split('/')
+        self.folder_name = _split[-2]
+        self.file_name = _split[-1].split('.')[0]
+        
+        with open('GUI_settings.txt', 'w') as f:
+            f.write(f'{self.folder_name} {self.file_name}')
+        
+        self.destroy_widjet()
+        self.load_GUI_settings()
+        self.load_detection_state()
+        self.create_menu()
 
 
-    def get_video(self,path):
+    def get_video(self, path:str):
         self.video = cv2.VideoCapture(path)
 
 
@@ -218,7 +233,5 @@ class VideoPlayer(tk.Frame):
 
 if __name__ == "__main__":
     root = tk.Tk()
-    path = "output.mp4"
     app = VideoPlayer(master=root)
-    app.get_video(path)
     root.mainloop()
