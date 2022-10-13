@@ -55,9 +55,9 @@ class HandTracker(AbstDetector):
         
 
         landmark_dict = {'Left':[], 'Right':[]}  # landmark_listをdict型で左手右手を取り出しやすいようにする
-        # landmark_color = {'Left':(255,0,0), 'Right':(0,255,0), "stress":(0,0,255)}
+        landmark_color = {'Left':(255,0,0), 'Right':(0,255,0), "stress":(0,0,255)}
         # landmark_color = {'Left':(205,205,205), 'Right':(205,205,205), "stress":(0,0,255)}
-        landmark_color = {'Left':(205,205,205), 'Right':(205,205,205), "stress":(205,205,205)}
+        # landmark_color = {'Left':(205,205,205), 'Right':(205,205,205), "stress":(205,205,205)}
 
         for i, (hand_landmarks, handedness) in enumerate(zip(self.results.multi_hand_landmarks, self.results.multi_handedness)):
             landmark_buf = []
@@ -71,10 +71,10 @@ class HandTracker(AbstDetector):
                 x = min(int(landmark.x * base_width), base_width - 1)
                 y = min(int(landmark.y * base_height), base_height - 1)
                 cv2.circle(image, (x, y), 4, landmark_color[hand_label], 5)
-                if j in [5,6,7,17,18,19]:
-                    if hand_label == 'Left' and j in [17,18,19]:
-                        continue
-                    cv2.circle(image, (x, y), 4, landmark_color["stress"], 5)
+                # if j in [5,6,7,17,18,19]:
+                #     if hand_label == 'Left' and j in [17,18,19]:
+                #         continue
+                #     cv2.circle(image, (x, y), 4, landmark_color["stress"], 5)
                 
             
             for con_pair in mp.solutions.hands.HAND_CONNECTIONS:
@@ -82,10 +82,10 @@ class HandTracker(AbstDetector):
                 u = (int(np.array(landmark_buf)[con_pair[0]][0]*base_width), int(np.array(landmark_buf)[con_pair[0]][1]*base_height))
                 v = (int(np.array(landmark_buf)[con_pair[1]][0]*base_width), int(np.array(landmark_buf)[con_pair[1]][1]*base_height))
                 cv2.line(image, u, v, landmark_color[hand_label], 2)
-                if con_pair in [(5,6), (6,7), (17,18), (18,19)]:
-                    if hand_label == 'Left' and con_pair in [(17,18), (18,19)]:
-                        continue
-                    cv2.line(image, u, v, landmark_color["stress"], 8)
+                # if con_pair in [(5,6), (6,7), (17,18), (18,19)]:
+                #     if hand_label == 'Left' and con_pair in [(17,18), (18,19)]:
+                #         continue
+                #     cv2.line(image, u, v, landmark_color["stress"], 8)
                 
             
             # ランドマークが欠損している場合は例外処理
@@ -93,5 +93,23 @@ class HandTracker(AbstDetector):
                 print("ランドマーク欠損の恐れあり")
             
             landmark_dict[hand_label] = landmark_buf
+
+        cv2.putText(image,
+            text='Right',
+            org=(10, 585),
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=1.0,
+            color=(0, 255, 0),
+            thickness=2,
+            lineType=cv2.LINE_AA)
+        
+        cv2.putText(image,
+            text='Left',
+            org=(120, 585),
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=1.0,
+            color=(255, 0, 0),
+            thickness=2,
+            lineType=cv2.LINE_AA)
 
         return (image, landmark_dict)

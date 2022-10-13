@@ -6,6 +6,7 @@ import pprint
 import os
 import glob
 from pathlib import Path
+from attr import field
 
 import hand_tracker
 import graphic
@@ -95,3 +96,25 @@ def get_file_path_list() -> list:
     # print(res_file_list)
     return res_file_list
 
+
+labels = [
+        [1,1,0,1,0,1,1,1,1,1,0,0,0,0,0,0,0,1],
+        [0,1,1,1,1,1,1,1,1,1,1,0,0,0,1,0,1,1],
+        [1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,0,0,1,1,1,1,1,1,0,1,1,1,1,1],
+        [1,1,0,1,0,1,1,1,1,1,1,1,1,0,1,0,1,1],
+        [1,1,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+        [0,0,0,1,1,1,1,0,1,0,1,0,0,0,1,0,0,0],
+    ]
+
+# files = get_file_path_list()
+# for file in files:
+#     ds = load_detection_state(file)
+#     video_name = Path(file).stem
+#     _split = file.split('\\')
+#     folder_name = _split[-2]
+#     print(f'{file}: {labels[int(folder_name)-1][int(video_name)-1]}  {ds.label}')
+    # ds.label = labels[int(folder_name)-1][int(video_name)-1]
+    # save_detection_state(ds, f'./data/{folder_name}/{video_name}.pkl')

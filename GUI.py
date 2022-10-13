@@ -24,12 +24,13 @@ class VideoPlayer(tk.Frame):
     def __init__(self,master=None):
         super().__init__(master,width=1000,height=500)
         self.master.resizable(width=False, height=False)
+        # self.sub_win = tk.Toplevel()
         self.config(bg="#000000")
         self.master.protocol("WM_DELETE_WINDOW", self.click_close)
         self.video = None
         self.playing = False
         self.video_thread = None
-        self.gender = None
+        self.gender = None 
         self.dominant_hand = None
         self.label = None
         self.ds = None
@@ -102,12 +103,6 @@ class VideoPlayer(tk.Frame):
         self.labelframe_video.propagate(False)
 
 
-    def destroy_widjet(self) -> None:
-        self.frame_menubar.destroy()
-        self.labelframe_parameter.destroy()
-        self.labelframe_video.destroy()
-
-
     def push_mediapipe_button(self):
         self.mediapipe_flag = not self.mediapipe_flag
 
@@ -152,23 +147,29 @@ class VideoPlayer(tk.Frame):
 
 
     def open_filedialog(self):
-        self.filename = filedialog.askopenfilename(
-            title = "ファイルの選択",
-            # filetypes = [("PKL", ".pkl"), ("MP4", ".mp4"),("Image file", ".bmp .png .jpg .tif"), ("Bitmap", ".bmp"), ("PNG", ".png"), ("JPEG", ".jpg"), ("Tiff", ".tif") ], # ファイルフィルタ
-            initialdir = "./data/" # 自分自身のディレクトリ
-        )
-        _split = self.filename.split('/')
-        self.folder_name = _split[-2]
-        self.file_name = _split[-1].split('.')[0]
+        try:
+            self.filename = filedialog.askopenfilename(
+                title = "ファイルの選択",
+                # filetypes = [("PKL", ".pkl"), ("MP4", ".mp4"),("Image file", ".bmp .png .jpg .tif"), ("Bitmap", ".bmp"), ("PNG", ".png"), ("JPEG", ".jpg"), ("Tiff", ".tif") ], # ファイルフィルタ
+                initialdir = "./data/" # 自分自身のディレクトリ
+            )
+            _split = self.filename.split('/')
+            self.folder_name = _split[-2]
+            self.file_name = _split[-1].split('.')[0]
+        except Exception as e:
+            print('ファイルが選択されませんでした')
         
         with open('GUI_settings.txt', 'w') as f:
             f.write(f'{self.folder_name} {self.file_name}')
-        
-        self.destroy_widjet()
+
+
+        self.get_video(f'./data/{self.folder_name}/{self.file_name}.mp4')
         self.load_GUI_settings()
         self.load_detection_state()
-        self.create_menu()
-
+        
+        self.combobox1.current(0 if self.gender=='man' else 1)
+        self.combobox2.current(0 if self.dominant_hand=='Right' else 1)
+        self.combobox3.current(0 if self.label==1 else 1)
 
     def get_video(self, path:str):
         self.video = cv2.VideoCapture(path)
