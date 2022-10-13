@@ -252,7 +252,6 @@ def main():
             ds.landmarks = apply_moving_average(ds.landmarks)   # 移動平均を適用する
             detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
             
-            ds.landmarks = apply_moving_average(ds.landmarks)                               # 移動平均を適用する
             ds.operation_time = calculate_operation_time(input_video_path=input_video_path) # 動画の時間を計算する
             ds.joint_angles = calculate_joint_angle(ds.landmarks)                           # 関節の角度を計算する
             ds.joint_angle_mean = calculate_mean(ds.joint_angles)                           # 関節の角度の平均を計算する
@@ -271,8 +270,8 @@ def execute_calculation(input_video_path :str) -> None:
 
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
     
 # files = detection_state.get_file_path_list()
 # for file in files:

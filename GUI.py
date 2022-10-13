@@ -1,11 +1,13 @@
+from cProfile import label
 from cgitb import text
 from distutils import command
 from logging import exception
 from textwrap import fill
 from turtle import width
-from cv2 import setIdentity
+from cv2 import FastFeatureDetector, FlannBasedMatcher, setIdentity
 import numpy as np
 import pickle
+from calculation import calculate_joint_angle
 import detection_state
 from tkinter import filedialog
 import cv2
@@ -17,6 +19,7 @@ import threading as th
 import hand_tracker
 from loguru import logger
 import copy
+import math
 
 lock = th.Lock()
 
@@ -24,7 +27,6 @@ class VideoPlayer(tk.Frame):
     def __init__(self,master=None):
         super().__init__(master,width=1000,height=500)
         self.master.resizable(width=False, height=False)
-        # self.sub_win = tk.Toplevel()
         self.config(bg="#000000")
         self.master.protocol("WM_DELETE_WINDOW", self.click_close)
         self.video = None
@@ -37,11 +39,17 @@ class VideoPlayer(tk.Frame):
         self.detector = None
         self.mediapipe_flag = True
         self.path = None
+        self.sub_window = None
 
         self.load_GUI_settings()
         self.load_detection_state()
         self.create_menu()
         
+
+        # label = tk.Label(self.sub_window, text="パラメータ1")
+        # label.grid(column=0, row=0, padx=10, pady=20)
+        # scale = tk.Scale(self.sub_window, orient=tk.HORIZONTAL, showvalue=False)
+        # scale.grid(column=1, row=0, padx=10, pady=20)
 
     def create_menu(self):
         #---------------------------------------
@@ -52,23 +60,26 @@ class VideoPlayer(tk.Frame):
         button2 = tk.Button(self.frame_menubar, text = "項目の訂正")
         button3 = tk.Button(self.frame_menubar, text = "パラメータの調節")
         button4 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button)
+        button5 = tk.Button(self.frame_menubar, text = "サブウィンドウ")
+
         # ボタンをフレームに配置
         button1.pack(side = tk.LEFT)
         button2.pack(side = tk.LEFT)
         button3.pack(side = tk.LEFT)
         button4.pack(side = tk.LEFT)
+        button5.pack(side = tk.LEFT)
         # ツールバーをウィンドの上に配置
         self.frame_menubar.pack(side=tk.TOP, fill=tk.X)
 
         #---------------------------------------
-        #  パラメータ調節
+        #  作業者情報
         #---------------------------------------
-        self.labelframe_parameter = tk.LabelFrame(self.master, text="パラメータの調整", width=300, height=450)
-        self.labelframe_parameter.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
-        self.labelframe_parameter.propagate(False)
+        self.labelframe_operator = tk.LabelFrame(self.master, text="作業者情報", width=150, height=450)
+        self.labelframe_operator.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+        self.labelframe_operator.propagate(False)
 
         # 性別
-        labelframe1 = tk.LabelFrame(self.labelframe_parameter, text="性別", height=40)
+        labelframe1 = tk.LabelFrame(self.labelframe_operator, text="性別", height=40)
         labelframe1.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.combobox1 = ttk.Combobox(labelframe1, state="readonly", values=["man","woman"])
         self.combobox1.pack(padx=10, pady=10)
@@ -76,22 +87,79 @@ class VideoPlayer(tk.Frame):
 
 
         # 利き手
-        labelframe2 = tk.LabelFrame(self.labelframe_parameter, text="利き手", height=40)
+        labelframe2 = tk.LabelFrame(self.labelframe_operator, text="利き手", height=40)
         labelframe2.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.combobox2 = ttk.Combobox(labelframe2, state="readonly", values=["Right","Left"])
         self.combobox2.pack(padx=10, pady=10)
         self.combobox2.current(0 if self.dominant_hand=='Right' else 1)
 
         # ラベル
-        labelframe3 = tk.LabelFrame(self.labelframe_parameter, text="ラベル", height=40)
+        labelframe3 = tk.LabelFrame(self.labelframe_operator, text="ラベル", height=40)
         labelframe3.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.combobox3 = ttk.Combobox(labelframe3, state="readonly", values=["1", "0"])
         self.combobox3.pack(padx=10, pady=10)
         self.combobox3.current(0 if self.label==1 else 1)
 
-        self.reload_button = tk.Button(self.labelframe_parameter, command=self.push_reload_button ,text="Reload", height=5, font=("",20), relief=tk.GROOVE)
+        self.reload_button = tk.Button(self.labelframe_operator, command=self.push_reload_button ,text="Reload", height=5, font=("",20), relief=tk.GROOVE)
         self.reload_button.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
 
+
+        #---------------------------------------
+        # パラメータ部
+        #---------------------------------------
+        self.labelframe_parameter = tk.LabelFrame(self.master, text="パラメータの調整", width=300, height=450)
+        self.labelframe_parameter.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+        self.labelframe_parameter.propagate(False)
+
+        label_left = tk.Label(self.labelframe_parameter, text='左手')
+        label_left.grid(row=0, column=1)
+        label_right = tk.Label(self.labelframe_parameter, text='右手')
+        label_right.grid(row=0, column=3)
+
+        self.scale_values = []
+        self.labels = []
+        self.scales = []
+        self.entries = []
+        connections = [
+            [0, 1, 2],
+            [1, 2, 3],
+            [2, 3, 4],
+            [0, 5, 6],
+            [5, 6, 7],
+            [6, 7, 8],
+            [9, 10, 11],
+            [10, 11, 12],
+            [13, 14, 15],
+            [14, 15, 16],
+            [17, 18, 19],
+            [18, 19, 20]
+        ]
+        parameter_name = ['0-1-2','1-2-3','2,3,4','0-5-6','5-6-7','6-7-8','9-10-11','10-11-12','11-12-13','14-15-16','17-18-19','18-19-20']
+        for i in range(12):
+            scale_value1 = tk.IntVar()
+            scale_value2 = tk.IntVar()
+
+            scale_value1.set(int(self.ds.joint_angle_mean['Left'][i]))
+            scale_value2.set(int(self.ds.joint_angle_mean['Right'][i]))
+
+            self.scale_values.append([scale_value1, scale_value2])
+
+            label = tk.Label(self.labelframe_parameter, text=parameter_name[i])
+            self.labels.append(label)
+            label.grid(row=i+1, column=0, padx=10, pady=10)
+            
+            entry1 = tk.Entry(self.labelframe_parameter, textvariable=self.scale_values[i][0], width=3, state=tk.DISABLED)
+            entry1.grid(row=i+1, column=2, padx=10)
+            entry2 = tk.Entry(self.labelframe_parameter, textvariable=self.scale_values[i][1], width=3, state=tk.DISABLED)
+            entry2.grid(row=i+1, column=4, padx=10)
+
+            scale1 = tk.Scale(self.labelframe_parameter, variable=self.scale_values[i][0] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
+            scale1.grid(row=i+1, column=1, padx=10, pady=10)
+            scale2 = tk.Scale(self.labelframe_parameter, variable=self.scale_values[i][1] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
+            scale2.grid(row=i+1, column=3, padx=10, pady=10)
+            self.scales.append([scale1, scale2])
+            
+        
         #---------------------------------------
         # 動画再生
         #---------------------------------------
@@ -101,6 +169,7 @@ class VideoPlayer(tk.Frame):
         self.video_button = tk.Button(self.labelframe_video, command=self.push_play_button)
         self.video_button.pack(fill=tk.BOTH)
         self.labelframe_video.propagate(False)
+            
 
 
     def push_mediapipe_button(self):
@@ -217,6 +286,12 @@ class VideoPlayer(tk.Frame):
             tmp_image = copy.deepcopy(self.frame)
             if self.detector.detect(self.frame):
                 tmp_image, tmp_landmark_dict = self.detector.draw(tmp_image)
+                joint_angle = self.calculate_joint_angle_1frame(tmp_landmark_dict)
+
+                if joint_angle != None:
+                    for i in range(12):
+                        self.scale_values[i][0].set(int(joint_angle['Left'][i]))
+                        self.scale_values[i][1].set(int(joint_angle['Right'][i]))
 
             rgb = cv2.cvtColor(tmp_image if self.mediapipe_flag else self.frame, cv2.COLOR_BGR2RGB)
             pil = Image.fromarray(rgb)
@@ -225,6 +300,50 @@ class VideoPlayer(tk.Frame):
             self.video_button.config(image=image)
             self.video_button.image = image
         lock.release()
+
+
+    def calculate_joint_angle_1frame(self, landmark):
+        connections = [
+            [0, 1, 2],
+            [1, 2, 3],
+            [2, 3, 4],
+            [0, 5, 6],
+            [5, 6, 7],
+            [6, 7, 8],
+            [9, 10, 11],
+            [10, 11, 12],
+            [13, 14, 15],
+            [14, 15, 16],
+            [17, 18, 19],
+            [18, 19, 20]
+        ]
+
+        joint_angle = {'Left':[], 'Right':[]}
+        
+        # 手を1つしか検出していないときはスルーする
+        # print(landmark['Right'])
+        if landmark['Left']==[] or landmark['Right']==[]:
+            return None
+
+        for hand in ['Left', 'Right']:
+            angles = []
+            
+            # 関節のつながりからなす角度を計算する
+            for connection in connections:
+                A = np.array(landmark[hand][connection[0]])
+                B = np.array(landmark[hand][connection[1]])
+                C = np.array(landmark[hand][connection[2]])
+                AB = B-A
+                BC = C-B
+                norm_AB = np.linalg.norm(AB)
+                norm_BC = np.linalg.norm(BC)
+                inner_AB_BC = np.inner(AB, BC)
+                angle_rad = np.arccos(inner_AB_BC/(norm_AB*norm_BC))
+                angle_deg = math.degrees(angle_rad)
+                angles.append(angle_deg)
+            joint_angle[hand] = angles
+        # print(joint_angle)
+        return joint_angle
 
 
     def video_frame_timer(self):
