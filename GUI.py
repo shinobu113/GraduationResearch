@@ -1,6 +1,7 @@
 from cProfile import label
 from cgitb import text
 from distutils import command
+from importlib.resources import path
 from logging import exception
 from textwrap import fill
 from turtle import width
@@ -40,9 +41,15 @@ class VideoPlayer(tk.Frame):
         self.mediapipe_flag = True
         self.path = None
         self.sub_window = None
+        self.realtime_flag = False
 
         self.load_GUI_settings()
-        self.load_detection_state()
+        if self.realtime_flag:
+            self.gender = 'man'
+            self.dominant_hand = 'Right'
+            self.label = '1'
+        else:
+            self.load_detection_state()
         self.create_menu()
         
 
@@ -57,17 +64,13 @@ class VideoPlayer(tk.Frame):
         #---------------------------------------
         self.frame_menubar = tk.Frame(self.master,relief = tk.SUNKEN, bd = 2)
         button1 = tk.Button(self.frame_menubar, text = "ファイルの選択", command=self.open_filedialog)
-        button2 = tk.Button(self.frame_menubar, text = "項目の訂正")
-        button3 = tk.Button(self.frame_menubar, text = "パラメータの調節")
-        button4 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button)
-        button5 = tk.Button(self.frame_menubar, text = "サブウィンドウ")
+        button2 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button)
+        button3 = tk.Button(self.frame_menubar, text = "リアルタイム", command=self.push_realtime_button)
 
         # ボタンをフレームに配置
         button1.pack(side = tk.LEFT)
         button2.pack(side = tk.LEFT)
         button3.pack(side = tk.LEFT)
-        button4.pack(side = tk.LEFT)
-        button5.pack(side = tk.LEFT)
         # ツールバーをウィンドの上に配置
         self.frame_menubar.pack(side=tk.TOP, fill=tk.X)
 
@@ -138,9 +141,12 @@ class VideoPlayer(tk.Frame):
         for i in range(12):
             scale_value1 = tk.IntVar()
             scale_value2 = tk.IntVar()
-
-            scale_value1.set(int(self.ds.joint_angle_mean['Left'][i]))
-            scale_value2.set(int(self.ds.joint_angle_mean['Right'][i]))
+            try:
+                scale_value1.set(int(self.ds.joint_angle_mean['Left'][i]))
+                scale_value2.set(int(self.ds.joint_angle_mean['Right'][i]))
+            except:
+                scale_value1.set(0)
+                scale_value2.set(0)
 
             self.scale_values.append([scale_value1, scale_value2])
 
@@ -176,6 +182,19 @@ class VideoPlayer(tk.Frame):
         self.mediapipe_flag = not self.mediapipe_flag
 
 
+    def push_realtime_button(self):
+        self.realtime_flag = not self.realtime_flag
+        self.video.release()
+
+        if self.realtime_flag:
+            with open('GUI_settings.txt', 'w') as f:
+                f.write(f'-1 -1')
+            self.get_video()
+            self.load_GUI_settings()
+        else:
+            self.open_filedialog()
+
+
     def click_close(self):
         # 現在開いているファイルをGUI_settings.txtに上書きして保存する．
         with open('GUI_settings.txt', 'w') as f:
@@ -190,9 +209,19 @@ class VideoPlayer(tk.Frame):
                 tmp = f.read().split()
                 self.folder_name = tmp[0]
                 self.file_name = tmp[1]
-            self.master.title(f'ファイル：./data/{self.folder_name}/{self.file_name}.mp4')
-            self.path = f'./data/{self.folder_name}/{self.file_name}.mp4'
-            self.get_video(self.path)
+            # MediaPipeの検出器を作成
+            self.detector = hand_tracker.HandTracker(
+                2, 0.7, 0.5
+            )
+            # フォルダ名とファイル名が-1のときはリアルタイム処理とする
+            if self.folder_name==str(-1) and self.file_name==str(-1):
+                self.master.title("Real Time")
+                self.realtime_flag = True
+                self.get_video()
+            else:
+                self.master.title(f'ファイル：./data/{self.folder_name}/{self.file_name}.mp4')
+                self.path = f'./data/{self.folder_name}/{self.file_name}.mp4'
+                self.get_video(self.path)
         except Exception as e:
             print('例外発生です')
             print(e)
@@ -206,10 +235,6 @@ class VideoPlayer(tk.Frame):
                 self.gender         = self.ds.gender
                 self.dominant_hand  = self.ds.dominant_hand
                 self.label          = self.ds.label
-            # MediaPipeの検出器を作成
-            self.detector = hand_tracker.HandTracker(
-                2, 0.7, 0.5
-            )
         except Exception as e:
             print('例外発生です')
             logger.error(e)
@@ -240,8 +265,12 @@ class VideoPlayer(tk.Frame):
         self.combobox2.current(0 if self.dominant_hand=='Right' else 1)
         self.combobox3.current(0 if self.label==1 else 1)
 
-    def get_video(self, path:str):
-        self.video = cv2.VideoCapture(path)
+
+    def get_video(self, path=""):
+        if path=="":
+            self.video = cv2.VideoCapture(0)
+        else:
+            self.video = cv2.VideoCapture(path)
 
 
     def push_reload_button(self):
