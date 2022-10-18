@@ -35,6 +35,7 @@ def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
     tn, fp, fn, tp = confusion_matrix(Y_test, X_test_predict).ravel()
     # print(Y_test)
     # print(X_test_predict)
+    print(lasso.intercept_)
     return acc, [tn,fp,fn,tp], lasso.coef_
 
 
@@ -50,15 +51,12 @@ def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
 # print(ina)
 
 
-acc = []
-# for i in range(1,31):
-#     print(0.5+(0.01*i))
-#     acc.append(model_fit(lasso_alpha=0.3, threshold=0.5+(0.01*i))[0])
-
 # mx = [0,0,0]
 # for i in range(1, 101):
 #     for j in range(1, 31):
 #         res = [model_fit(lasso_alpha=0.01*i, threshold=0.5+(0.01*j))[0], i, j]
 #         mx = [res[0], 0.01*i, 0.5+(0.01*j)] if mx[0] <= res[0] else mx
+
+# print(mx)
 
 print(model_fit(lasso_alpha=1.0, threshold=0.62))

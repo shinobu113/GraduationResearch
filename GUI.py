@@ -159,9 +159,9 @@ class VideoPlayer(tk.Frame):
             entry2 = tk.Entry(self.labelframe_parameter, textvariable=self.scale_values[i][1], width=3, state=tk.DISABLED)
             entry2.grid(row=i+1, column=4, padx=10)
 
-            scale1 = tk.Scale(self.labelframe_parameter, variable=self.scale_values[i][0] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
+            scale1 = tk.Scale(self.labelframe_parameter, to=180, variable=self.scale_values[i][0] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
             scale1.grid(row=i+1, column=1, padx=10, pady=10)
-            scale2 = tk.Scale(self.labelframe_parameter, variable=self.scale_values[i][1] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
+            scale2 = tk.Scale(self.labelframe_parameter, to=180, variable=self.scale_values[i][1] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
             scale2.grid(row=i+1, column=3, padx=10, pady=10)
             self.scales.append([scale1, scale2])
             
@@ -362,16 +362,15 @@ class VideoPlayer(tk.Frame):
                 A = np.array(landmark[hand][connection[0]])
                 B = np.array(landmark[hand][connection[1]])
                 C = np.array(landmark[hand][connection[2]])
-                AB = B-A
+                BA = A-B
                 BC = C-B
-                norm_AB = np.linalg.norm(AB)
+                norm_AB = np.linalg.norm(BA)
                 norm_BC = np.linalg.norm(BC)
-                inner_AB_BC = np.inner(AB, BC)
+                inner_AB_BC = np.inner(BA, BC)
                 angle_rad = np.arccos(inner_AB_BC/(norm_AB*norm_BC))
                 angle_deg = math.degrees(angle_rad)
                 angles.append(angle_deg)
             joint_angle[hand] = angles
-        # print(joint_angle)
         return joint_angle
 
 

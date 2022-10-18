@@ -152,18 +152,16 @@ def calculate_joint_angle(landmarks :list):
                 A = landmark[hand][connection[0]]
                 B = landmark[hand][connection[1]]
                 C = landmark[hand][connection[2]]
-                AB = B-A
+                BA = A-B
                 BC = C-B
-                norm_AB = np.linalg.norm(AB)
+                norm_AB = np.linalg.norm(BA)
                 norm_BC = np.linalg.norm(BC)
-                inner_AB_BC = np.inner(AB, BC)
+                inner_AB_BC = np.inner(BA, BC)
                 angle_rad = np.arccos(inner_AB_BC/(norm_AB*norm_BC))
                 angle_deg = math.degrees(angle_rad)
                 angles.append(angle_deg)
-                # print(angle_deg)
             joint_angle[hand] = angles
         joint_angles.append(joint_angle)
-    # print(joint_angles)
     return joint_angles
 
 
@@ -245,7 +243,8 @@ def main():
             
             if os.path.isfile(output_pkl_path):
                 # ds = detection_state.load_detection_state(pkl_path=output_pkl_path)
-                continue
+                # continue
+                pass
             
             ds = calculate_landmarks(input_video_path=input_video_path)
             
