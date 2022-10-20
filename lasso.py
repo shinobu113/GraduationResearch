@@ -25,6 +25,7 @@ def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
     lasso = Lasso(alpha=lasso_alpha).fit(X_train, Y_train)
     X_test_predict = lasso.predict(X_test)
+    X_test_predict = np.array(X_test_predict)/max(X_test_predict) # 予想値を正規化
     X_test_predict = [1 if predict > threshold else 0 for predict in X_test_predict]
 
     X_test_predict = np.array(X_test_predict)

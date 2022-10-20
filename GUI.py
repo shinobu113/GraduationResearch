@@ -3,6 +3,7 @@ from cgitb import text
 from distutils import command
 from importlib.resources import path
 from logging import exception
+from ntpath import join
 from textwrap import fill
 from turtle import width
 from cv2 import FastFeatureDetector, FlannBasedMatcher, setIdentity
@@ -268,7 +269,7 @@ class VideoPlayer(tk.Frame):
 
     def get_video(self, path=""):
         if path=="":
-            self.video = cv2.VideoCapture(0)
+            self.video = cv2.VideoCapture(1)
         else:
             self.video = cv2.VideoCapture(path)
 
@@ -317,9 +318,10 @@ class VideoPlayer(tk.Frame):
                 tmp_image, tmp_landmark_dict = self.detector.draw(tmp_image)
                 joint_angle = self.calculate_joint_angle_1frame(tmp_landmark_dict)
 
-                if joint_angle != None:
-                    for i in range(12):
+                for i in range(12):
+                    if joint_angle['Left'] != []:
                         self.scale_values[i][0].set(int(joint_angle['Left'][i]))
+                    if joint_angle['Right'] != []:
                         self.scale_values[i][1].set(int(joint_angle['Right'][i]))
 
             rgb = cv2.cvtColor(tmp_image if self.mediapipe_flag else self.frame, cv2.COLOR_BGR2RGB)
@@ -348,15 +350,13 @@ class VideoPlayer(tk.Frame):
         ]
 
         joint_angle = {'Left':[], 'Right':[]}
-        
-        # 手を1つしか検出していないときはスルーする
-        # print(landmark['Right'])
-        if landmark['Left']==[] or landmark['Right']==[]:
-            return None
 
         for hand in ['Left', 'Right']:
-            angles = []
+            # 手を検出していないときはスルー
+            if landmark[hand]==[]:
+                continue
             
+            angles = []
             # 関節のつながりからなす角度を計算する
             for connection in connections:
                 A = np.array(landmark[hand][connection[0]])
