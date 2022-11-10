@@ -9,9 +9,10 @@ from turtle import width
 from cv2 import FastFeatureDetector, FlannBasedMatcher, setIdentity
 import numpy as np
 import pickle
+import lasso
 from calculation import calculate_joint_angle
 import detection_state
-from tkinter import filedialog
+from tkinter import DoubleVar, filedialog
 import cv2
 from PIL import Image, ImageTk
 import tkinter as tk
@@ -22,6 +23,8 @@ import hand_tracker
 from loguru import logger
 import copy
 import math
+
+from pyparsing import col
 
 lock = th.Lock()
 
@@ -43,8 +46,10 @@ class VideoPlayer(tk.Frame):
         self.path = None
         self.sub_window = None
         self.realtime_flag = False
+        self.realtime_lasso_predict = DoubleVar()
 
         self.load_GUI_settings()
+        self.lasso = lasso.load_lasso_model('lasso_model.pkl')
         if self.realtime_flag:
             self.gender = 'man'
             self.dominant_hand = 'Right'
@@ -52,12 +57,6 @@ class VideoPlayer(tk.Frame):
         else:
             self.load_detection_state()
         self.create_menu()
-        
-
-        # label = tk.Label(self.sub_window, text="パラメータ1")
-        # label.grid(column=0, row=0, padx=10, pady=20)
-        # scale = tk.Scale(self.sub_window, orient=tk.HORIZONTAL, showvalue=False)
-        # scale.grid(column=1, row=0, padx=10, pady=20)
 
     def create_menu(self):
         #---------------------------------------
@@ -67,11 +66,13 @@ class VideoPlayer(tk.Frame):
         button1 = tk.Button(self.frame_menubar, text = "ファイルの選択", command=self.open_filedialog)
         button2 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button)
         button3 = tk.Button(self.frame_menubar, text = "リアルタイム", command=self.push_realtime_button)
+        button4 = tk.Button(self.frame_menubar, text = "検出情報出力", command=self.push_output_button)
 
         # ボタンをフレームに配置
         button1.pack(side = tk.LEFT)
         button2.pack(side = tk.LEFT)
         button3.pack(side = tk.LEFT)
+        button4.pack(side = tk.LEFT)
         # ツールバーをウィンドの上に配置
         self.frame_menubar.pack(side=tk.TOP, fill=tk.X)
 
@@ -115,10 +116,25 @@ class VideoPlayer(tk.Frame):
         self.labelframe_parameter.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         self.labelframe_parameter.propagate(False)
 
+        #lassoのリアルタイム出力
+        label_lasso = tk.Label(self.labelframe_parameter, text='Lassoのリアルタイム出力')
+        label_lasso.grid(row=0, column=0, columnspan=2, pady=15)
+        scale_lasso = tk.Scale(self.labelframe_parameter, variable=self.realtime_lasso_predict, troughcolor='#BBBBBB',
+                                resolution=0.01, to=1.5, orient=tk.HORIZONTAL, width=15, showvalue=False, length=180)
+        scale_lasso.grid(row=0, column=3, pady=15)
+        entry_lasso_value = tk.Entry(self.labelframe_parameter, textvariable=self.realtime_lasso_predict, width=5, state=tk.DISABLED)
+        entry_lasso_value.grid(row=0, column=4, pady=15)
+        
+        # Lassoの出力用の円
+        self.lasso_canvas = tk.Canvas(self.labelframe_parameter, width=20, height=20)
+        self.lasso_canvas.grid(row=0, column=2)
+        self.lasso_canvas.create_oval(2,2,20,20, width=0, fill='#ff0000', tag='circle')
+        
+        # 左手と右手のラベル
         label_left = tk.Label(self.labelframe_parameter, text='左手')
-        label_left.grid(row=0, column=1)
+        label_left.grid(row=1, column=1)
         label_right = tk.Label(self.labelframe_parameter, text='右手')
-        label_right.grid(row=0, column=3)
+        label_right.grid(row=1, column=3)
 
         self.scale_values = []
         self.labels = []
@@ -153,17 +169,17 @@ class VideoPlayer(tk.Frame):
 
             label = tk.Label(self.labelframe_parameter, text=parameter_name[i])
             self.labels.append(label)
-            label.grid(row=i+1, column=0, padx=10, pady=10)
+            label.grid(row=i+2, column=0, padx=10, pady=10)
             
             entry1 = tk.Entry(self.labelframe_parameter, textvariable=self.scale_values[i][0], width=3, state=tk.DISABLED)
-            entry1.grid(row=i+1, column=2, padx=10)
+            entry1.grid(row=i+2, column=2, padx=10)
             entry2 = tk.Entry(self.labelframe_parameter, textvariable=self.scale_values[i][1], width=3, state=tk.DISABLED)
-            entry2.grid(row=i+1, column=4, padx=10)
+            entry2.grid(row=i+2, column=4, padx=10)
 
             scale1 = tk.Scale(self.labelframe_parameter, to=180, variable=self.scale_values[i][0] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
-            scale1.grid(row=i+1, column=1, padx=10, pady=10)
+            scale1.grid(row=i+2, column=1, padx=10, pady=10)
             scale2 = tk.Scale(self.labelframe_parameter, to=180, variable=self.scale_values[i][1] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
-            scale2.grid(row=i+1, column=3, padx=10, pady=10)
+            scale2.grid(row=i+2, column=3, padx=10, pady=10)
             self.scales.append([scale1, scale2])
             
         
@@ -177,6 +193,16 @@ class VideoPlayer(tk.Frame):
         self.video_button.pack(fill=tk.BOTH)
         self.labelframe_video.propagate(False)
             
+    
+    def push_output_button(self):
+        # リアルタイム処理をしているときは無効
+        if self.realtime_flag:
+            print('無効な操作です')
+            return
+        
+        print(str(self.ds))
+        
+        
 
 
     def push_mediapipe_button(self):
@@ -323,6 +349,18 @@ class VideoPlayer(tk.Frame):
                         self.scale_values[i][0].set(int(joint_angle['Left'][i]))
                     if joint_angle['Right'] != []:
                         self.scale_values[i][1].set(int(joint_angle['Right'][i]))
+                try:
+                    x = []
+                    x.extend(list(joint_angle['Left']))
+                    x.extend(list(joint_angle['Right']))
+                    pre = self.lasso.predict([x])[0]
+                    pre = round(pre,2) # 小数点2桁へ丸める
+                    self.realtime_lasso_predict.set(pre)
+                    # Lassoの出力が閾値以上なら緑，以下なら赤色の円を描く
+                    self.lasso_canvas.itemconfig('circle', fill='#00ff00' if pre > 0.62 else '#ff0000')
+                except Exception as e:
+                    pass
+                
 
             rgb = cv2.cvtColor(tmp_image if self.mediapipe_flag else self.frame, cv2.COLOR_BGR2RGB)
             pil = Image.fromarray(rgb)

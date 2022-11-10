@@ -28,3 +28,5 @@ __pycache__/calculation.cpython-37.pyc
 __pycache__/svm.cpython-37.pyc
 labels.txt
 GUI_settings.txt
+calculation.py
+.gitignore

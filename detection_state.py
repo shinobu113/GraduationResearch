@@ -29,14 +29,15 @@ class DetectionState(object):
     
     # クラス変数を表示するための関数
     def __str__(self):
-        return f'landmarks : {self.landmarks}\n \
-                joint_angles : {self.joint_angles}\n \
-                gender : {self.gender}\n \
-                dominant_hand : {self.dominant_hand}\n \
-                operation_time : {self.operation_time}\n \
-                joint_angle_mean : {self.joint_angle_mean}\n \
-                joint_angle_var : {self.joint_angle_var}\n \
-                label : {self.label}'
+        # return f'landmarks : {self.landmarks}\n \
+        #         joint_angles : {self.joint_angles}\n \
+        #         gender : {self.gender}\n \
+        #         dominant_hand : {self.dominant_hand}\n \
+        #         operation_time : {self.operation_time}\n \
+        #         joint_angle_mean : {self.joint_angle_mean}\n \
+        #         joint_angle_var : {self.joint_angle_var}\n \
+        #         label : {self.label}'
+        return f'gender : {self.gender}\ndominant_hand : {self.dominant_hand}\noperation_time : {self.operation_time}\njoint_angle_mean : {self.joint_angle_mean}\njoint_angle_var : {self.joint_angle_var}\nlabel : {self.label}'
 
 
 # pkl形式で保存する
@@ -118,3 +119,9 @@ labels = [
 #     print(f'{file}: {labels[int(folder_name)-1][int(video_name)-1]}  {ds.label}')
 #     ds.label = labels[int(folder_name)-1][int(video_name)-1]
 #     save_detection_state(ds, f'./data/{folder_name}/{video_name}.pkl')
+
+# files = get_file_path_list()
+# for file in files:
+#     ds = load_detection_state(file)
+#     if ds.label==0:
+#         print(file)
