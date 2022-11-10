@@ -74,7 +74,7 @@ def calculate_landmarks(input_video_path :str):
     return ds
 
 
-# 動画を左右反転させる(左利き用)
+# 動画を左右反転させる(左利き用):動画を左右反転して保存する用なのでリアルタイム処理ではない．
 def flip_left_right(input_video_path :str):
 
     # video_name = Path(video_path).stem  # 拡張子抜きのファイル名
@@ -229,7 +229,6 @@ def main():
     """
     BASE_DIR_PATH = './data/'
     dir_names = os.listdir(BASE_DIR_PATH)
-    dir_names = [4]
     for dir_name in dir_names:
         video_paths = glob.glob(f'{BASE_DIR_PATH}/{dir_name}/*.mp4')
         
@@ -254,11 +253,11 @@ def main():
             ds.operation_time = calculate_operation_time(input_video_path=input_video_path) # 動画の時間を計算する
             ds.joint_angles = calculate_joint_angle(ds.landmarks)                           # 関節の角度を計算する
             if ds.joint_angles == []:
-                print(video_path)
+                print(f'手を検出しなかった::{video_path}')
                 continue
             ds.joint_angle_mean = calculate_mean(ds.joint_angles)                           # 関節の角度の平均を計算する
             ds.joint_angle_var = calculate_variance(ds.joint_angles)                        # 関節の角度の分散を計算する
-            # detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
+            detection_state.save_detection_state(ds=ds, output_pkl_path=output_pkl_path)    # ランドマークを保存する
 
             # グラフの表示
             # graph = Graphic_3D(ds.landmarks)
@@ -273,8 +272,8 @@ def execute_calculation(input_video_path :str) -> None:
 
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
     
 # files = detection_state.get_file_path_list()
 # for file in files:
@@ -282,6 +281,7 @@ if __name__ == "__main__":
 #     print(file, ds.label)
 
 # ds = detection_state.load_detection_state("C:\\Users\\shino\\Desktop\\R4\\GraduationResearch\\Program\\data\\4\\5.pkl")
+# print(str(ds))
 
 # ds = calculate_joint_angle(ds.landmarks)
 # print(ds)

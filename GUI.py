@@ -12,7 +12,7 @@ import pickle
 import lasso
 from calculation import calculate_joint_angle
 import detection_state
-from tkinter import DoubleVar, filedialog
+from tkinter import BooleanVar, DoubleVar, filedialog
 import cv2
 from PIL import Image, ImageTk
 import tkinter as tk
@@ -23,6 +23,7 @@ import hand_tracker
 from loguru import logger
 import copy
 import math
+from numpy import pad
 
 from pyparsing import col
 
@@ -33,7 +34,7 @@ class VideoPlayer(tk.Frame):
         super().__init__(master,width=1000,height=500)
         self.master.resizable(width=False, height=False)
         self.config(bg="#000000")
-        self.master.protocol("WM_DELETE_WINDOW", self.click_close)
+        self.master.protocol("WM_DELETE_WINDOW", self.click_close_mainwindow)
         self.video = None
         self.playing = False
         self.video_thread = None
@@ -44,9 +45,16 @@ class VideoPlayer(tk.Frame):
         self.detector = None
         self.mediapipe_flag = True
         self.path = None
-        self.sub_window = None
         self.realtime_flag = False
         self.realtime_lasso_predict = DoubleVar()
+        self.lasso_predict_mean = DoubleVar()
+        self.lasso_predict_sum = 0 #Lassoの予測値の合計
+        self.frame_cnt = 0 #スタートからのフレーム数
+        self.threshold = 0.62 
+        self.is_left_handed = BooleanVar()
+        self.is_left_handed.set(False)
+        self.is_capture_started = False
+
 
         self.load_GUI_settings()
         self.lasso = lasso.load_lasso_model('lasso_model.pkl')
@@ -67,12 +75,14 @@ class VideoPlayer(tk.Frame):
         button2 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button)
         button3 = tk.Button(self.frame_menubar, text = "リアルタイム", command=self.push_realtime_button)
         button4 = tk.Button(self.frame_menubar, text = "検出情報出力", command=self.push_output_button)
+        button5 = tk.Button(self.frame_menubar, text = "動画撮影", command=self.push_movie_button)
 
         # ボタンをフレームに配置
         button1.pack(side = tk.LEFT)
         button2.pack(side = tk.LEFT)
         button3.pack(side = tk.LEFT)
         button4.pack(side = tk.LEFT)
+        button5.pack(side = tk.LEFT)
         # ツールバーをウィンドの上に配置
         self.frame_menubar.pack(side=tk.TOP, fill=tk.X)
 
@@ -105,36 +115,50 @@ class VideoPlayer(tk.Frame):
         self.combobox3.pack(padx=10, pady=10)
         self.combobox3.current(0 if self.label==1 else 1)
 
-        self.reload_button = tk.Button(self.labelframe_operator, command=self.push_reload_button ,text="Reload", height=5, font=("",20), relief=tk.GROOVE)
-        self.reload_button.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
-
+        # 左利き用に動画を反転するかどうか
+        labelframe4 = tk.LabelFrame(self.labelframe_operator, text="左利き用", height=40)
+        labelframe4.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+        self.checkbutton = tk.Checkbutton(labelframe4, text='左利きか否か', variable=self.is_left_handed)
+        self.checkbutton.pack(padx=10, pady=10)
 
         #---------------------------------------
         # パラメータ部
         #---------------------------------------
-        self.labelframe_parameter = tk.LabelFrame(self.master, text="パラメータの調整", width=300, height=450)
+        self.labelframe_parameter = tk.LabelFrame(self.master, text="パラメータ", width=300, height=450)
         self.labelframe_parameter.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         self.labelframe_parameter.propagate(False)
 
-        #lassoのリアルタイム出力
-        label_lasso = tk.Label(self.labelframe_parameter, text='Lassoのリアルタイム出力')
-        label_lasso.grid(row=0, column=0, columnspan=2, pady=15)
-        scale_lasso = tk.Scale(self.labelframe_parameter, variable=self.realtime_lasso_predict, troughcolor='#BBBBBB',
+        # Lassoのリアルタイム出力
+        label_lasso_realtime = tk.Label(self.labelframe_parameter, text='Lassoのリアルタイム予測値')
+        label_lasso_realtime.grid(row=0, column=0, columnspan=2, pady=15)
+        scale_lasso_realtime = tk.Scale(self.labelframe_parameter, variable=self.realtime_lasso_predict,
                                 resolution=0.01, to=1.5, orient=tk.HORIZONTAL, width=15, showvalue=False, length=180)
-        scale_lasso.grid(row=0, column=3, pady=15)
-        entry_lasso_value = tk.Entry(self.labelframe_parameter, textvariable=self.realtime_lasso_predict, width=5, state=tk.DISABLED)
-        entry_lasso_value.grid(row=0, column=4, pady=15)
+        scale_lasso_realtime.grid(row=0, column=3, pady=15)
+        entry_lasso_realtime_value = tk.Entry(self.labelframe_parameter, textvariable=self.realtime_lasso_predict, width=4, state=tk.DISABLED)
+        entry_lasso_realtime_value.grid(row=0, column=4, pady=15)
         
-        # Lassoの出力用の円
-        self.lasso_canvas = tk.Canvas(self.labelframe_parameter, width=20, height=20)
-        self.lasso_canvas.grid(row=0, column=2)
-        self.lasso_canvas.create_oval(2,2,20,20, width=0, fill='#ff0000', tag='circle')
+        self.lasso_canvas_realtime = tk.Canvas(self.labelframe_parameter, width=20, height=20)
+        self.lasso_canvas_realtime.grid(row=0, column=2)
+        self.lasso_canvas_realtime.create_oval(2,2,20,20, width=0, fill='#ff0000', tag='circle_realtime')
         
+        # Lassoの予測値の平均用
+        label_lasso_mean = tk.Label(self.labelframe_parameter, text='Lassoの予測値の平均')
+        label_lasso_mean.grid(row=1, column=0, columnspan=2, pady=15)
+        scale_lasso_mean = tk.Scale(self.labelframe_parameter, variable=self.lasso_predict_mean,
+                                resolution=0.01, to=1.5, orient=tk.HORIZONTAL, width=15, showvalue=False, length=180)
+        scale_lasso_mean.grid(row=1, column=3, pady=15)
+        entry_lasso_mean_value = tk.Entry(self.labelframe_parameter, textvariable=self.lasso_predict_mean, width=4, state=tk.DISABLED)
+        entry_lasso_mean_value.grid(row=1, column=4, pady=15)
+
+        self.lasso_canvas_mean = tk.Canvas(self.labelframe_parameter, width=20, height=20)
+        self.lasso_canvas_mean.grid(row=1, column=2)
+        self.lasso_canvas_mean.create_oval(2,2,20,20, width=0, fill='#ff0000', tag='circle_mean')
+
         # 左手と右手のラベル
         label_left = tk.Label(self.labelframe_parameter, text='左手')
-        label_left.grid(row=1, column=1)
+        label_left.grid(row=2, column=1)
         label_right = tk.Label(self.labelframe_parameter, text='右手')
-        label_right.grid(row=1, column=3)
+        label_right.grid(row=2, column=3)
 
         self.scale_values = []
         self.labels = []
@@ -169,17 +193,17 @@ class VideoPlayer(tk.Frame):
 
             label = tk.Label(self.labelframe_parameter, text=parameter_name[i])
             self.labels.append(label)
-            label.grid(row=i+2, column=0, padx=10, pady=10)
+            label.grid(row=i+3, column=0, padx=10, pady=10)
             
             entry1 = tk.Entry(self.labelframe_parameter, textvariable=self.scale_values[i][0], width=3, state=tk.DISABLED)
-            entry1.grid(row=i+2, column=2, padx=10)
+            entry1.grid(row=i+3, column=2, padx=10)
             entry2 = tk.Entry(self.labelframe_parameter, textvariable=self.scale_values[i][1], width=3, state=tk.DISABLED)
-            entry2.grid(row=i+2, column=4, padx=10)
+            entry2.grid(row=i+3, column=4, padx=10)
 
             scale1 = tk.Scale(self.labelframe_parameter, to=180, variable=self.scale_values[i][0] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
-            scale1.grid(row=i+2, column=1, padx=10, pady=10)
+            scale1.grid(row=i+3, column=1, padx=10, pady=10)
             scale2 = tk.Scale(self.labelframe_parameter, to=180, variable=self.scale_values[i][1] ,orient=tk.HORIZONTAL, width=10, showvalue=False, length=150)
-            scale2.grid(row=i+2, column=3, padx=10, pady=10)
+            scale2.grid(row=i+3, column=3, padx=10, pady=10)
             self.scales.append([scale1, scale2])
             
         
@@ -192,8 +216,55 @@ class VideoPlayer(tk.Frame):
         self.video_button = tk.Button(self.labelframe_video, command=self.push_play_button)
         self.video_button.pack(fill=tk.BOTH)
         self.labelframe_video.propagate(False)
-            
+
+
+    def push_movie_button(self):
+        self.sub_window = tk.Toplevel(self.master, width=250, height=250, )
+        self.sub_window.title('動画撮影用ウィンドウ')
+        self.sub_window.minsize(height=250, width=250) 
+        
+        self.start_button = tk.Button(self.sub_window, text='開始', command=self.push_start_movie_button, width=10, height=4)
+        self.start_button.pack(side=tk.TOP, pady = 20)
+
+        self.finish_button = tk.Button(self.sub_window, text='終了', command=self.push_finish_movie_button, width=10, height=4)
+        self.finish_button.pack(side=tk.TOP, pady = 20)
+
+
+    def push_start_movie_button(self):
+        # リアルタイム処理でない場合は処理を行わない
+        if self.realtime_flag == False and self.is_capture_started == True:
+            return
+        
+        print("---動画の撮影を開始しました---")
+        self.start_button['state'] = 'disabled'
+        self.is_capture_started = True
+        
+        # 動画保存用のvideowriterの設定
+        width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = self.video.get(cv2.CAP_PROP_FPS) #フレームレート取得
+        fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v') #フォーマット指定
+        self.writer = cv2.VideoWriter('./output.mp4', fmt, fps, (width, height))
+
     
+    def push_finish_movie_button(self):
+        print("---動画の撮影を終了しました---")
+        try:
+            self.writer.release()
+        except Exception as e:
+            pass
+        self.is_capture_started = False
+
+
+    
+    def click_close_subwindow(self):
+        try:
+            self.writer.release()
+        except Exception as e:
+            pass
+        self.sub_window = None
+
+
     def push_output_button(self):
         # リアルタイム処理をしているときは無効
         if self.realtime_flag:
@@ -203,8 +274,6 @@ class VideoPlayer(tk.Frame):
         print(str(self.ds))
         
         
-
-
     def push_mediapipe_button(self):
         self.mediapipe_flag = not self.mediapipe_flag
 
@@ -212,7 +281,11 @@ class VideoPlayer(tk.Frame):
     def push_realtime_button(self):
         self.realtime_flag = not self.realtime_flag
         self.video.release()
-
+        
+        self.lasso_predict_sum = 0.0
+        self.frame_cnt = 0
+        self.lasso_predict_mean.set(0.0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+        
         if self.realtime_flag:
             with open('GUI_settings.txt', 'w') as f:
                 f.write(f'-1 -1')
@@ -222,7 +295,7 @@ class VideoPlayer(tk.Frame):
             self.open_filedialog()
 
 
-    def click_close(self):
+    def click_close_mainwindow(self):
         # 現在開いているファイルをGUI_settings.txtに上書きして保存する．
         with open('GUI_settings.txt', 'w') as f:
             f.write(f'{self.folder_name} {self.file_name}')
@@ -325,7 +398,7 @@ class VideoPlayer(tk.Frame):
         if self.playing:
             self.video_thread = th.Thread(target=self.video_frame_timer)
             self.video_thread.setDaemon(True)
-            self.video_thread.start()          
+            self.video_thread.start()
         else:
             self.video_thread = None 
 
@@ -334,10 +407,17 @@ class VideoPlayer(tk.Frame):
         global lock
         lock.acquire()
         ret, self.frame = self.video.read()
-
+    
         if not ret:
             self.video.set(cv2.CAP_PROP_POS_FRAMES, 0)
         
+        # 左利きにチェックボタンが入っていたら動画を反転させる．
+        if self.is_left_handed.get()==True:
+            self.frame = cv2.flip(self.frame,1)
+        
+        if self.is_capture_started == True and self.writer != None:
+            self.writer.write(self.frame)
+
         else:
             tmp_image = copy.deepcopy(self.frame)
             if self.detector.detect(self.frame):
@@ -357,7 +437,11 @@ class VideoPlayer(tk.Frame):
                     pre = round(pre,2) # 小数点2桁へ丸める
                     self.realtime_lasso_predict.set(pre)
                     # Lassoの出力が閾値以上なら緑，以下なら赤色の円を描く
-                    self.lasso_canvas.itemconfig('circle', fill='#00ff00' if pre > 0.62 else '#ff0000')
+                    self.lasso_canvas_realtime.itemconfig('circle_realtime', fill='#00ff00' if pre > self.threshold else '#ff0000')
+                    self.frame_cnt += 1
+                    self.lasso_predict_sum += pre
+                    self.lasso_predict_mean.set(round((self.lasso_predict_sum/self.frame_cnt), 2))
+                    self.lasso_canvas_mean.itemconfig('circle_mean', fill='#00ff00' if self.lasso_predict_mean.get() > self.threshold else '#ff0000')
                 except Exception as e:
                     pass
                 

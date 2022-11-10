@@ -118,6 +118,8 @@ labels = [
 #     folder_name = _split[-2]
 #     print(f'{file}: {labels[int(folder_name)-1][int(video_name)-1]}  {ds.label}')
 #     ds.label = labels[int(folder_name)-1][int(video_name)-1]
+#     if int(folder_name) == 7:
+#         ds.dominant_hand = "Left"
 #     save_detection_state(ds, f'./data/{folder_name}/{video_name}.pkl')
 
 # files = get_file_path_list()

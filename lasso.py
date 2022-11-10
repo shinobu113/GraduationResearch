@@ -37,10 +37,11 @@ def load_lasso_model(path):
 def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
     lasso = Lasso(alpha=lasso_alpha).fit(X_train, Y_train)
+    # lasso = Lasso(alpha=lasso_alpha).fit(X,Y)
     X_test_predict = lasso.predict(X_test)
     X_test_predict = np.array(X_test_predict)#/max(X_test_predict) # 予想値を正規化
     X_test_predict = [1 if predict > threshold else 0 for predict in X_test_predict]
-    save_lasso_model(lasso)
+    # save_lasso_model(lasso)
 
     X_test_predict = np.array(X_test_predict)
     Y_test = np.array(Y_test)
@@ -48,9 +49,6 @@ def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
     match_cnt = list(X_test_predict == Y_test).count(True)
     acc = match_cnt/len(X_test_predict)
     tn, fp, fn, tp = confusion_matrix(Y_test, X_test_predict).ravel()
-    # print(Y_test)
-    # print(X_test_predict)
-    # print(lasso.intercept_)
     return acc, [tn,fp,fn,tp], lasso.coef_, lasso.intercept_
 
 
