@@ -10,7 +10,7 @@ from cv2 import FastFeatureDetector, FlannBasedMatcher, setIdentity
 import numpy as np
 import pickle
 import lasso
-from calculation import calculate_joint_angle
+import calculation
 import detection_state
 from tkinter import BooleanVar, DoubleVar, filedialog
 import cv2
@@ -24,6 +24,8 @@ from loguru import logger
 import copy
 import math
 from numpy import pad
+from pathlib import Path
+import os
 
 from pyparsing import col
 
@@ -71,11 +73,12 @@ class VideoPlayer(tk.Frame):
         #  ツールバー
         #---------------------------------------
         self.frame_menubar = tk.Frame(self.master,relief = tk.SUNKEN, bd = 2)
-        button1 = tk.Button(self.frame_menubar, text = "ファイルの選択", command=self.open_filedialog)
-        button2 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button)
-        button3 = tk.Button(self.frame_menubar, text = "リアルタイム", command=self.push_realtime_button)
-        button4 = tk.Button(self.frame_menubar, text = "検出情報出力", command=self.push_output_button)
-        button5 = tk.Button(self.frame_menubar, text = "動画撮影", command=self.push_movie_button)
+        button1 = tk.Button(self.frame_menubar, text = "ファイルの選択", command=self.open_filedialog, font=("MS Pゴシック", 10, "bold"))
+        button2 = tk.Button(self.frame_menubar, text = "ファイルの解析", command=self.push_file_analyze_button, font=("MS Pゴシック", 10, "bold"))
+        button3 = tk.Button(self.frame_menubar, text = "MediaPipe", command=self.push_mediapipe_button, font=("MS Pゴシック", 10, "bold"))
+        button4 = tk.Button(self.frame_menubar, text = "リアルタイム", command=self.push_realtime_button, font=("MS Pゴシック", 10, "bold"))
+        button5 = tk.Button(self.frame_menubar, text = "検出情報出力", command=self.push_output_button, font=("MS Pゴシック", 10, "bold"))
+        button6 = tk.Button(self.frame_menubar, text = "動画撮影", command=self.push_movie_button, font=("MS Pゴシック", 10, "bold"))
 
         # ボタンをフレームに配置
         button1.pack(side = tk.LEFT)
@@ -83,53 +86,53 @@ class VideoPlayer(tk.Frame):
         button3.pack(side = tk.LEFT)
         button4.pack(side = tk.LEFT)
         button5.pack(side = tk.LEFT)
+        button6.pack(side = tk.LEFT)
         # ツールバーをウィンドの上に配置
         self.frame_menubar.pack(side=tk.TOP, fill=tk.X)
 
         #---------------------------------------
         #  作業者情報
         #---------------------------------------
-        self.labelframe_operator = tk.LabelFrame(self.master, text="作業者情報", width=150, height=450)
+        self.labelframe_operator = tk.LabelFrame(self.master, text="作業者情報", width=150, height=450, font=("MS Pゴシック", 10, "bold"))
         self.labelframe_operator.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         self.labelframe_operator.propagate(False)
 
         # 性別
-        labelframe1 = tk.LabelFrame(self.labelframe_operator, text="性別", height=40)
+        labelframe1 = tk.LabelFrame(self.labelframe_operator, text="性別", height=40, font=("MS Pゴシック", 10, "bold"))
         labelframe1.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.combobox1 = ttk.Combobox(labelframe1, state="readonly", values=["man","woman"])
         self.combobox1.pack(padx=10, pady=10)
         self.combobox1.current(0 if self.gender=='man' else 1)
 
-
         # 利き手
-        labelframe2 = tk.LabelFrame(self.labelframe_operator, text="利き手", height=40)
+        labelframe2 = tk.LabelFrame(self.labelframe_operator, text="利き手", height=40, font=("MS Pゴシック", 10, "bold"))
         labelframe2.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.combobox2 = ttk.Combobox(labelframe2, state="readonly", values=["Right","Left"])
         self.combobox2.pack(padx=10, pady=10)
         self.combobox2.current(0 if self.dominant_hand=='Right' else 1)
 
         # ラベル
-        labelframe3 = tk.LabelFrame(self.labelframe_operator, text="ラベル", height=40)
+        labelframe3 = tk.LabelFrame(self.labelframe_operator, text="ラベル", height=40, font=("MS Pゴシック", 10, "bold"))
         labelframe3.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.combobox3 = ttk.Combobox(labelframe3, state="readonly", values=["1", "0"])
         self.combobox3.pack(padx=10, pady=10)
         self.combobox3.current(0 if self.label==1 else 1)
 
         # 左利き用に動画を反転するかどうか
-        labelframe4 = tk.LabelFrame(self.labelframe_operator, text="左利き用", height=40)
+        labelframe4 = tk.LabelFrame(self.labelframe_operator, text="左利き用", height=40, font=("MS Pゴシック", 10, "bold"))
         labelframe4.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-        self.checkbutton = tk.Checkbutton(labelframe4, text='左利きか否か', variable=self.is_left_handed)
+        self.checkbutton = tk.Checkbutton(labelframe4, text='左利きか否か', variable=self.is_left_handed, font=("MS Pゴシック", 10, "bold"))
         self.checkbutton.pack(padx=10, pady=10)
 
         #---------------------------------------
         # パラメータ部
         #---------------------------------------
-        self.labelframe_parameter = tk.LabelFrame(self.master, text="パラメータ", width=300, height=450)
+        self.labelframe_parameter = tk.LabelFrame(self.master, text="パラメータ", width=300, height=450, font=("MS Pゴシック", 10, "bold"))
         self.labelframe_parameter.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         self.labelframe_parameter.propagate(False)
 
         # Lassoのリアルタイム出力
-        label_lasso_realtime = tk.Label(self.labelframe_parameter, text='Lassoのリアルタイム予測値')
+        label_lasso_realtime = tk.Label(self.labelframe_parameter, text='Lassoのリアルタイム予測値', font=("MS Pゴシック", 10, "bold"))
         label_lasso_realtime.grid(row=0, column=0, columnspan=2, pady=15)
         scale_lasso_realtime = tk.Scale(self.labelframe_parameter, variable=self.realtime_lasso_predict,
                                 resolution=0.01, to=1.5, orient=tk.HORIZONTAL, width=15, showvalue=False, length=180)
@@ -142,7 +145,7 @@ class VideoPlayer(tk.Frame):
         self.lasso_canvas_realtime.create_oval(2,2,20,20, width=0, fill='#ff0000', tag='circle_realtime')
         
         # Lassoの予測値の平均用
-        label_lasso_mean = tk.Label(self.labelframe_parameter, text='Lassoの予測値の平均')
+        label_lasso_mean = tk.Label(self.labelframe_parameter, text='Lassoの予測値の平均', font=("MS Pゴシック", 10, "bold"))
         label_lasso_mean.grid(row=1, column=0, columnspan=2, pady=15)
         scale_lasso_mean = tk.Scale(self.labelframe_parameter, variable=self.lasso_predict_mean,
                                 resolution=0.01, to=1.5, orient=tk.HORIZONTAL, width=15, showvalue=False, length=180)
@@ -155,9 +158,9 @@ class VideoPlayer(tk.Frame):
         self.lasso_canvas_mean.create_oval(2,2,20,20, width=0, fill='#ff0000', tag='circle_mean')
 
         # 左手と右手のラベル
-        label_left = tk.Label(self.labelframe_parameter, text='左手')
+        label_left = tk.Label(self.labelframe_parameter, text='左手', font=("MS Pゴシック", 10, "bold"))
         label_left.grid(row=2, column=1)
-        label_right = tk.Label(self.labelframe_parameter, text='右手')
+        label_right = tk.Label(self.labelframe_parameter, text='右手', font=("MS Pゴシック", 10, "bold"))
         label_right.grid(row=2, column=3)
 
         self.scale_values = []
@@ -191,7 +194,7 @@ class VideoPlayer(tk.Frame):
 
             self.scale_values.append([scale_value1, scale_value2])
 
-            label = tk.Label(self.labelframe_parameter, text=parameter_name[i])
+            label = tk.Label(self.labelframe_parameter, text=parameter_name[i], font=("MS Pゴシック", 10, "bold"))
             self.labels.append(label)
             label.grid(row=i+3, column=0, padx=10, pady=10)
             
@@ -210,12 +213,40 @@ class VideoPlayer(tk.Frame):
         #---------------------------------------
         # 動画再生
         #---------------------------------------
-        self.labelframe_video = tk.LabelFrame(self.master, text="動画再生", width=810, height=620)
+        self.labelframe_video = tk.LabelFrame(self.master, text="動画再生", width=810, height=620, font=("MS Pゴシック", 10, "bold"))
         self.labelframe_video.pack(side=tk.LEFT, padx=10, pady=10)
         
         self.video_button = tk.Button(self.labelframe_video, command=self.push_play_button)
         self.video_button.pack(fill=tk.BOTH)
         self.labelframe_video.propagate(False)
+
+
+    def push_file_analyze_button(self):
+    
+        self.filename = filedialog.askopenfilename(
+            title = "ファイルの選択",
+            # filetypes = [("PKL", ".pkl"), ("MP4", ".mp4"),("Image file", ".bmp .png .jpg .tif"), ("Bitmap", ".bmp"), ("PNG", ".png"), ("JPEG", ".jpg"), ("Tiff", ".tif") ], # ファイルフィルタ
+            initialdir = "./data/" # 自分自身のディレクトリ
+        )
+
+        try:
+            _split = self.filename.split('/')
+            self.folder_name = _split[-2]
+            self.file_name = _split[-1].split('.')[0]
+            ds = calculation.calculate_landmarks(self.filename)
+            ds.landmarks = calculation.apply_moving_average(ds.landmarks)   # 移動平均を適用する
+            ds.operation_time = calculation.calculate_operation_time(input_video_path=self.filename) # 動画の時間を計算する
+            ds.joint_angles = calculation.calculate_joint_angle(ds.landmarks)                           # 関節の角度を計算する
+            if ds.joint_angles == []:
+                print(f'手を検出しなかった')
+                return
+            ds.joint_angle_mean = calculation.calculate_mean(ds.joint_angles)                           # 関節の角度の平均を計算する
+            ds.joint_angle_var = calculation.calculate_variance(ds.joint_angles)                        # 関節の角度の分散を計算する
+            detection_state.save_detection_state(ds=ds, output_pkl_path=f'./data/{self.folder_name}/{self.file_name}.pkl')         # ランドマークを保存する
+        except Exception as e:
+            logger.error(e)
+
+        
 
 
     def push_movie_button(self):
@@ -235,25 +266,31 @@ class VideoPlayer(tk.Frame):
         if self.realtime_flag == False and self.is_capture_started == True:
             return
         
-        print("---動画の撮影を開始しました---")
-        self.start_button['state'] = 'disabled'
+        print("＜＜＜動画の撮影を開始しました＞＞＞")
+        self.start_button['state'] = tk.DISABLED
         self.is_capture_started = True
         
         # 動画保存用のvideowriterの設定
         width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = self.video.get(cv2.CAP_PROP_FPS) #フレームレート取得
+        fps = 15.0 # 30fpsだと動画が早送りになる
         fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v') #フォーマット指定
-        self.writer = cv2.VideoWriter('./output.mp4', fmt, fps, (width, height))
+        
+        cnt = 1
+        while os.path.isfile(f'./data/outputs/{cnt}.mp4'):
+            cnt += 1
+        self.writer = cv2.VideoWriter(f'./data/outputs/{cnt}.mp4', fmt, fps, (width, height))
 
     
     def push_finish_movie_button(self):
-        print("---動画の撮影を終了しました---")
+        print("＞＞＞動画の撮影を終了しました＜＜＜")
+        self.is_capture_started = False
+        self.start_button['state'] = tk.NORMAL
         try:
             self.writer.release()
         except Exception as e:
             pass
-        self.is_capture_started = False
 
 
     
@@ -336,8 +373,10 @@ class VideoPlayer(tk.Frame):
                 self.dominant_hand  = self.ds.dominant_hand
                 self.label          = self.ds.label
         except Exception as e:
-            print('例外発生です')
+            print('pklファイルの読み込みに失敗しました')
             logger.error(e)
+        
+
 
 
     def open_filedialog(self):
@@ -359,8 +398,11 @@ class VideoPlayer(tk.Frame):
 
         self.get_video(f'./data/{self.folder_name}/{self.file_name}.mp4')
         self.load_GUI_settings()
+
         self.load_detection_state()
         
+        self.lasso_predict_sum = 0
+        self.frame_cnt = 0
         self.combobox1.current(0 if self.gender=='man' else 1)
         self.combobox2.current(0 if self.dominant_hand=='Right' else 1)
         self.combobox3.current(0 if self.label==1 else 1)
@@ -410,6 +452,9 @@ class VideoPlayer(tk.Frame):
     
         if not ret:
             self.video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ret, self.frame = self.video.read()
+            self.lasso_predict_sum = 0
+            self.frame_cnt = 0
         
         # 左利きにチェックボタンが入っていたら動画を反転させる．
         if self.is_left_handed.get()==True:
@@ -418,7 +463,7 @@ class VideoPlayer(tk.Frame):
         if self.is_capture_started == True and self.writer != None:
             self.writer.write(self.frame)
 
-        else:
+        if ret:
             tmp_image = copy.deepcopy(self.frame)
             if self.detector.detect(self.frame):
                 tmp_image, tmp_landmark_dict = self.detector.draw(tmp_image)

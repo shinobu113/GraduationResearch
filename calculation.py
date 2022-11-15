@@ -5,6 +5,7 @@ import argparse
 from pprint import pprint
 from time import time, sleep
 import glob
+from turtle import color
 from cv2 import FILE_NODE_MAP, destroyWindow
 import pickle
 import math
@@ -275,10 +276,55 @@ def execute_calculation(input_video_path :str) -> None:
 # if __name__ == "__main__":
 #     main()
     
-# files = detection_state.get_file_path_list()
-# for file in files:
-#     ds = detection_state.load_detection_state(file)
-#     print(file, ds.label)
+files = detection_state.get_file_path_list()
+_list = []
+for file in files:
+    ds = detection_state.load_detection_state(file)
+    l = [ds.joint_angle_mean['Right'][4],ds.joint_angle_mean['Right'][6],ds.joint_angle_mean['Right'][10], ds.label]
+    _list.append(l)
+label0 = [l for l in _list if l[3]==0] # ラベルが0のもの
+label0 = np.float64(np.array(label0))
+label1 = [l for l in _list if l[3]==1] # ラベルが1のもの
+label1 = np.float64(np.array(label1))
+
+import matplotlib.pyplot as plt
+fig = plt.figure()
+ax1 = fig.add_subplot(1,3,1)
+ax2 = fig.add_subplot(1,3,2)
+ax3 = fig.add_subplot(1,3,3)
+
+ax1.set_title('R-5-6-7')
+ax2.set_title('R-9-10-11')
+ax3.set_title('R-17-18-19')
+
+fig.subplots_adjust(wspace=0.5, hspace=0.5)
+
+labels = ['label:0', 'label:1']
+
+bp1 = ax1.boxplot([label0[:,0], label1[:,0]], patch_artist=True, labels=labels, widths=0.3, medianprops=dict(color='orange', linewidth=2))
+bp2 = ax2.boxplot([label0[:,1], label1[:,1]], patch_artist=True, labels=labels, widths=0.3, medianprops=dict(color='orange', linewidth=2))
+bp3 = ax3.boxplot([label0[:,2], label1[:,2]], patch_artist=True, labels=labels, widths=0.3, medianprops=dict(color='orange', linewidth=2))
+
+
+colors=['pink', 'lightblue']
+
+for patch, color in zip(bp1['boxes'], colors):
+    patch.set_facecolor(color)
+for patch, color in zip(bp2['boxes'], colors):
+    patch.set_facecolor(color)
+for patch, color in zip(bp3['boxes'], colors):
+    patch.set_facecolor(color)
+
+plt.show()
+
+# for i, l in enumerate(_list):
+#     ax1.scatter(0 if l[3]==0 else 1 ,l[0], color='red' if l[3]==0 else 'blue')
+#     ax2.scatter(0 if l[3]==0 else 1 ,l[1], color='red' if l[3]==0 else 'blue')
+#     ax3.scatter(0 if l[3]==0 else 1 ,l[2], color='red' if l[3]==0 else 'blue')
+
+# plt.plot()
+# plt.show()
+
 
 # ds = detection_state.load_detection_state("C:\\Users\\shino\\Desktop\\R4\\GraduationResearch\\Program\\data\\4\\5.pkl")
 # print(str(ds))
