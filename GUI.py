@@ -56,7 +56,7 @@ class VideoPlayer(tk.Frame):
         self.is_left_handed = BooleanVar()
         self.is_left_handed.set(False)
         self.is_capture_started = False
-        self.lasso_mean_value = 0.0
+        self.lasso_mean_value = 0.0 # Lassoの平均値(ファイル解析時に保存する)
 
 
         self.load_GUI_settings()
@@ -242,14 +242,19 @@ class VideoPlayer(tk.Frame):
             ds.landmarks = calculation.apply_moving_average(ds.landmarks)   # 移動平均を適用する
             ds.operation_time = calculation.calculate_operation_time(input_video_path=self.filename) # 動画の時間を計算する
             ds.joint_angles = calculation.calculate_joint_angle(ds.landmarks)                           # 関節の角度を計算する
+            
+            # Lassoの平均値を計算する
+            ds.lasso_mean_value = calculation.calculate_lasso_predict_mean(ds.joint_angles)
+            
             if ds.joint_angles == []:
                 print(f'手を検出しなかった')
                 return
             ds.joint_angle_mean = calculation.calculate_mean(ds.joint_angles)                           # 関節の角度の平均を計算する
             ds.joint_angle_var = calculation.calculate_variance(ds.joint_angles)                        # 関節の角度の分散を計算する
-            # detection_state.save_detection_state(ds=ds, output_pkl_path=f'./data/{self.folder_name}/{self.file_name}.pkl')         # ランドマークを保存する
-            with open(f'./data/{self.folder_name}/{self.file_name}.pkl', 'wb') as f:
-                pickle.dump(self.ds, f)
+
+            self.ds = ds
+            detection_state.save_detection_state(ds=self.ds, output_pkl_path=f'./data/{self.folder_name}/{self.file_name}.pkl')         # ランドマークを保存する
+            
             # ファイルの解析をした後、そのファイルを再生部分に表示する
             with open('GUI_settings.txt', 'w') as f:
                 f.write(f'{self.folder_name} {self.file_name}')
@@ -307,7 +312,6 @@ class VideoPlayer(tk.Frame):
     
     def push_finish_movie_button(self):
         print("＞＞＞動画の撮影を終了しました＜＜＜")
-        print(f'Lassoの予測値の平均値：{self.lasso_predict_sum/self.frame_cnt}')
         self.click_close_subwindow()
         self.is_capture_started = False
         self.start_button['state'] = tk.NORMAL
@@ -317,8 +321,8 @@ class VideoPlayer(tk.Frame):
             pass
         
         # 撮影した動画を解析して動画再生部分に表示する
-        self.lasso_mean_value = (self.lasso_predict_sum/self.frame_cnt)
-        self.ds.lasso_mean_value = self.lasso_mean_value
+        # self.lasso_mean_value = (self.lasso_predict_sum/self.frame_cnt)
+        # self.ds.lasso_mean_value = self.lasso_mean_value
         self.push_file_analyze_button()
         
         self.lasso_predict_sum = 0

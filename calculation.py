@@ -21,6 +21,7 @@ from graphic import Graphic_3D
 
 import hand_tracker
 import detection_state
+import lasso
 
 try:
     detector = hand_tracker.HandTracker(
@@ -29,6 +30,25 @@ try:
 except Exception as e:
     logger.error(e)
     exit(1)
+
+
+_lasso = lasso.load_lasso_model('lasso_model.pkl')
+
+def calculate_lasso_predict_mean(joint_angles :list):
+    frame_cnt = 0
+    lasso_predict_sum = 0.0
+
+    for joint_angle in joint_angles:
+        x = []
+        x.extend(list(joint_angle['Left']))
+        x.extend(list(joint_angle['Right']))
+        pre = _lasso.predict([x])[0]
+        pre = round(pre,2) # 小数点2桁へ丸める
+        frame_cnt += 1
+        lasso_predict_sum += pre
+        
+    return lasso_predict_sum/frame_cnt
+
 
 
 def calculate_landmarks(input_video_path :str):
