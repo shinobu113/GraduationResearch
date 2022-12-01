@@ -22,6 +22,7 @@ class DetectionState(object):
         self.joint_angle_mean = {}
         self.joint_angle_var = {}
         self.label = 0                  # はんだが良いか悪いかのラベル
+        self.lasso_mean_value = 0.0     # Lassoの平均値(ファイル解析時に保存する)
 
     def update_landmarks(self, landmark_dict :dict) -> None:
         self.landmarks.append(landmark_dict)
@@ -37,7 +38,7 @@ class DetectionState(object):
         #         joint_angle_mean : {self.joint_angle_mean}\n \
         #         joint_angle_var : {self.joint_angle_var}\n \
         #         label : {self.label}'
-        return f'gender : {self.gender}\ndominant_hand : {self.dominant_hand}\noperation_time : {self.operation_time}\njoint_angle_mean : {self.joint_angle_mean}\njoint_angle_var : {self.joint_angle_var}\nlabel : {self.label}'
+        return f'gender : {self.gender}\ndominant_hand : {self.dominant_hand}\noperation_time : {self.operation_time}\njoint_angle_mean : {self.joint_angle_mean}\njoint_angle_var : {self.joint_angle_var}\nLasso_mean_value : {self.lasso_mean_value}\nlabel : {self.label}'
 
 
 # pkl形式で保存する

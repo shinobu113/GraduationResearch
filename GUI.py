@@ -56,6 +56,7 @@ class VideoPlayer(tk.Frame):
         self.is_left_handed = BooleanVar()
         self.is_left_handed.set(False)
         self.is_capture_started = False
+        self.lasso_mean_value = 0.0
 
 
         self.load_GUI_settings()
@@ -116,13 +117,17 @@ class VideoPlayer(tk.Frame):
         labelframe3.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.combobox3 = ttk.Combobox(labelframe3, state="readonly", values=["1", "0"])
         self.combobox3.pack(padx=10, pady=10)
-        self.combobox3.current(0 if self.label==1 else 1)
+        self.combobox3.current(0 if self.label=='1' else 1)
 
         # 左利き用に動画を反転するかどうか
         labelframe4 = tk.LabelFrame(self.labelframe_operator, text="左利き用", height=40, font=("MS Pゴシック", 10, "bold"))
         labelframe4.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
         self.checkbutton = tk.Checkbutton(labelframe4, text='左利きか否か', variable=self.is_left_handed, font=("MS Pゴシック", 10, "bold"))
         self.checkbutton.pack(padx=10, pady=10)
+
+        # 作業者情報の変更の保存ボタン
+        reload_button = tk.Button(self.labelframe_operator, text='作業者情報更新', font=("MS Pゴシック", 10, "bold"), command=self.push_reload_button, height=5)
+        reload_button.pack(side=tk.BOTTOM, fill=tk.X, pady=20)
 
         #---------------------------------------
         # パラメータ部
@@ -242,7 +247,22 @@ class VideoPlayer(tk.Frame):
                 return
             ds.joint_angle_mean = calculation.calculate_mean(ds.joint_angles)                           # 関節の角度の平均を計算する
             ds.joint_angle_var = calculation.calculate_variance(ds.joint_angles)                        # 関節の角度の分散を計算する
-            detection_state.save_detection_state(ds=ds, output_pkl_path=f'./data/{self.folder_name}/{self.file_name}.pkl')         # ランドマークを保存する
+            # detection_state.save_detection_state(ds=ds, output_pkl_path=f'./data/{self.folder_name}/{self.file_name}.pkl')         # ランドマークを保存する
+            with open(f'./data/{self.folder_name}/{self.file_name}.pkl', 'wb') as f:
+                pickle.dump(self.ds, f)
+            # ファイルの解析をした後、そのファイルを再生部分に表示する
+            with open('GUI_settings.txt', 'w') as f:
+                f.write(f'{self.folder_name} {self.file_name}')
+            self.get_video(f'./data/{self.folder_name}/{self.file_name}.mp4')
+            self.load_GUI_settings()
+            self.load_detection_state()
+            self.lasso_predict_sum = 0
+            self.frame_cnt = 0
+            self.combobox1.current(0 if self.gender=='man' else 1)
+            self.combobox2.current(0 if self.dominant_hand=='Right' else 1)
+            self.combobox3.current(0 if self.label=='1' else 1)
+            self.realtime_flag = False
+        
         except Exception as e:
             logger.error(e)
 
@@ -267,6 +287,8 @@ class VideoPlayer(tk.Frame):
             return
         
         print("＜＜＜動画の撮影を開始しました＞＞＞")
+        self.lasso_predict_sum = 0
+        self.frame_cnt = 0
         self.start_button['state'] = tk.DISABLED
         self.is_capture_started = True
         
@@ -277,20 +299,30 @@ class VideoPlayer(tk.Frame):
         fps = 15.0 # 30fpsだと動画が早送りになる
         fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v') #フォーマット指定
         
-        cnt = 1
-        while os.path.isfile(f'./data/outputs/{cnt}.mp4'):
-            cnt += 1
-        self.writer = cv2.VideoWriter(f'./data/outputs/{cnt}.mp4', fmt, fps, (width, height))
+        self.save_movie_cnt = 1
+        while os.path.isfile(f'./data/outputs/{self.save_movie_cnt}.mp4'):
+            self.save_movie_cnt += 1
+        self.writer = cv2.VideoWriter(f'./data/outputs/{self.save_movie_cnt}.mp4', fmt, fps, (width, height))
 
     
     def push_finish_movie_button(self):
         print("＞＞＞動画の撮影を終了しました＜＜＜")
+        print(f'Lassoの予測値の平均値：{self.lasso_predict_sum/self.frame_cnt}')
+        self.click_close_subwindow()
         self.is_capture_started = False
         self.start_button['state'] = tk.NORMAL
         try:
             self.writer.release()
         except Exception as e:
             pass
+        
+        # 撮影した動画を解析して動画再生部分に表示する
+        self.lasso_mean_value = (self.lasso_predict_sum/self.frame_cnt)
+        self.ds.lasso_mean_value = self.lasso_mean_value
+        self.push_file_analyze_button()
+        
+        self.lasso_predict_sum = 0
+        self.frame_cnt = 0
 
 
     
@@ -369,9 +401,10 @@ class VideoPlayer(tk.Frame):
         try:
             with open(f'./data/{self.folder_name}/{self.file_name}.pkl', 'rb') as f:
                 self.ds = pickle.load(f)
-                self.gender         = self.ds.gender
-                self.dominant_hand  = self.ds.dominant_hand
-                self.label          = self.ds.label
+                self.gender             = self.ds.gender
+                self.dominant_hand      = self.ds.dominant_hand
+                self.label              = self.ds.label
+                self.lasso_mean_value   = self.ds.lasso_mean_value
         except Exception as e:
             print('pklファイルの読み込みに失敗しました')
             logger.error(e)
@@ -380,6 +413,7 @@ class VideoPlayer(tk.Frame):
 
 
     def open_filedialog(self):
+        self.realtime_flag = False
         try:
             self.filename = filedialog.askopenfilename(
                 title = "ファイルの選択",
@@ -405,7 +439,7 @@ class VideoPlayer(tk.Frame):
         self.frame_cnt = 0
         self.combobox1.current(0 if self.gender=='man' else 1)
         self.combobox2.current(0 if self.dominant_hand=='Right' else 1)
-        self.combobox3.current(0 if self.label==1 else 1)
+        self.combobox3.current(0 if self.label=='1' else 1)
 
 
     def get_video(self, path=""):
@@ -416,6 +450,9 @@ class VideoPlayer(tk.Frame):
 
 
     def push_reload_button(self):
+        if self.realtime_flag == True:
+            print("無効な操作です")
+            return
         try:
             self.gender = self.combobox1.get()
             self.dominant_hand = self.combobox2.get()

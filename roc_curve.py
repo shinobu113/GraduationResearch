@@ -33,13 +33,13 @@ def model_fit(lasso_alpha: float = 1):
 
 Y_test, X_test_predict = model_fit()
 
-fpr, tpr, thresholds = roc_curve(Y_test, X_test_predict)
+fpr, tpr, thresholds = roc_curve(Y_test, X_test_predict, drop_intermediate=False)
 
 plt.plot(fpr, tpr, marker='o', linewidth=3)
 plt.xlabel('FPR: False positive rate', fontsize=18)
 plt.ylabel('TPR: True positive rate', fontsize=18)
 plt.grid()
-plt.savefig('sklearn_roc_curve.png')
+plt.savefig('./figures/sklearn_roc_curve222.png')
 
 print(roc_auc_score(Y_test, X_test_predict))
 
