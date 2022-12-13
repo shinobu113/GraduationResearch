@@ -233,11 +233,24 @@ class VideoPlayer(tk.Frame):
             # filetypes = [("PKL", ".pkl"), ("MP4", ".mp4"),("Image file", ".bmp .png .jpg .tif"), ("Bitmap", ".bmp"), ("PNG", ".png"), ("JPEG", ".jpg"), ("Tiff", ".tif") ], # ファイルフィルタ
             initialdir = "./data/" # 自分自身のディレクトリ
         )
-
+        # すべての動画に解析を行う場合の処理
+        # import glob
+        # BASE_DIR_PATH = '.\\data\\'
+        # dir_names = os.listdir(BASE_DIR_PATH)
+        # for dir_name in dir_names:
+        #     video_paths = glob.glob(f'{BASE_DIR_PATH}{dir_name}\\*.mp4')
+        #     for video_path in video_paths:
+        #         video_name = Path(video_path).stem  # 拡張子抜きのファイル名
+                
+        #         if video_name=='original':  # 動画の元データには解析を行わない
+        #             continue
         try:
+            # self.filename = video_path
+            # _split = self.filename.split('\\')
             _split = self.filename.split('/')
             self.folder_name = _split[-2]
             self.file_name = _split[-1].split('.')[0]
+
             ds = calculation.calculate_landmarks(self.filename)
             ds.landmarks = calculation.apply_moving_average(ds.landmarks)   # 移動平均を適用する
             ds.operation_time = calculation.calculate_operation_time(input_video_path=self.filename) # 動画の時間を計算する
@@ -304,14 +317,15 @@ class VideoPlayer(tk.Frame):
         fps = 15.0 # 30fpsだと動画が早送りになる
         fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v') #フォーマット指定
         
-        self.save_movie_cnt = 1
-        while os.path.isfile(f'./data/outputs/{self.save_movie_cnt}.mp4'):
-            self.save_movie_cnt += 1
-        self.writer = cv2.VideoWriter(f'./data/outputs/{self.save_movie_cnt}.mp4', fmt, fps, (width, height))
+        save_movie_cnt = '1'
+        while os.path.isfile(f'./data/outputs/{save_movie_cnt.zfill(2)}.mp4'):
+            save_movie_cnt = int(save_movie_cnt)
+            save_movie_cnt += 1
+        self.writer = cv2.VideoWriter(f'./data/outputs/{save_movie_cnt.zfill(2)}.mp4', fmt, fps, (width, height))
 
     
     def push_finish_movie_button(self):
-        print("＞＞＞動画の撮影を終了しました＜＜＜")
+        print("＞＞＞動画の撮影を終了しました＜＜＜\n")
         self.click_close_subwindow()
         self.is_capture_started = False
         self.start_button['state'] = tk.NORMAL
@@ -407,7 +421,7 @@ class VideoPlayer(tk.Frame):
                 self.ds = pickle.load(f)
                 self.gender             = self.ds.gender
                 self.dominant_hand      = self.ds.dominant_hand
-                self.label              = self.ds.label
+                self.label              = str(self.ds.label)
                 self.lasso_mean_value   = self.ds.lasso_mean_value
         except Exception as e:
             print('pklファイルの読み込みに失敗しました')
@@ -463,7 +477,7 @@ class VideoPlayer(tk.Frame):
             self.label = self.combobox3.get()
             self.ds.gender = self.gender
             self.ds.dominant_hand = self.dominant_hand
-            self.ds.label = self.label
+            self.ds.label = str(self.label)
             with open(f'./data/{self.folder_name}/{self.file_name}.pkl', 'wb') as f:
                 pickle.dump(self.ds, f)
 

@@ -89,6 +89,8 @@ def get_file_path_list() -> list:
     BASE_DIR_PATH = './data'
     dir_names = os.listdir(BASE_DIR_PATH)
     for dir_name in dir_names:
+        if dir_name in ['outputs']:
+            continue
         video_pathes = glob.glob(f'{BASE_DIR_PATH}\\{dir_name}\\*.pkl')
         for video_path in video_pathes:
             video_name = Path(video_path).stem  # 拡張子抜きのファイル名

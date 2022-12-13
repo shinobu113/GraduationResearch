@@ -24,6 +24,8 @@ for file_path in file_pathes:
     X.append(x)
     Y.append(label)
 
+print(f'xsize:{len(X)}\nysize:{len(Y)}')
+
 
 def save_lasso_model(lasso):
     with open('lasso_model.pkl', 'wb') as f:
@@ -36,6 +38,10 @@ def load_lasso_model(path):
 
 def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
+    # print(f'x_train_size:{len(X_train)}\nx_test_size:{len(X_test)}')
+    # print(f'A:{len([i for i in Y_train if i==1])}')
+    # print(f'B:{len([i for i in Y_test if i==1])}')
+
     lasso = Lasso(alpha=lasso_alpha).fit(X_train, Y_train)
     # lasso = Lasso(alpha=lasso_alpha).fit(X,Y)
     X_test_predict = lasso.predict(X_test)
@@ -72,6 +78,6 @@ def model_fit(lasso_alpha: float = 1.0, threshold: float = 0.5):
 
 # print(mx)
 
-# print(model_fit(lasso_alpha=1.0, threshold=0.62))
+print(model_fit(lasso_alpha=1.0, threshold=0.62))
 # x = [[133.7618819 , 158.0386377 , 166.4304732 , 121.70697591, 149.61480441, 169.22587927, 104.55543623, 137.8820008 , 99.954787  , 145.934889  , 117.15120198, 146.38841871, 145.14301347, 157.96377096, 158.62162379, 127.41866752,       120.18761217, 153.02368028, 106.91659358, 148.39772183,       107.88407104, 148.03522397, 124.00295339, 148.20250267]]
 # lasso = load_lasso_model("lasso_model.pkl")
